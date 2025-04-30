@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import React from 'react';
-import { useAppSelector } from "@/stores/hooks";
+import { useAppSelector } from "@/stores/redux/hooks";
 
 const NavUserSkeleton = () => {
     return (

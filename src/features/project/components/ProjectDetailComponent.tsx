@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { useGetProjectByIdQuery } from "@/stores/api/projectApi";
+import { useGetProjectByIdQuery } from "@/stores/redux/api/projectApi";
 import KanbanBoard from '@/features/project/components/KanbanBoard';
 import KanbanLoading from "@/features/project/components/KanbanLoading";
 

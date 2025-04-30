@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link";
-import { useGetProjectsMeQuery } from "@/stores/api/projectApi";
+import { useGetProjectsMeQuery } from "@/stores/redux/api/projectApi";
 
 
 const ProjectSkeletons = () => {

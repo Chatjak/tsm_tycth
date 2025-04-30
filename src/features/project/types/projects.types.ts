@@ -14,10 +14,11 @@ export interface TaskDto {
     ParentTaskId?: number;
     Title: string;
     Description?: string;
-    Status?: string;
+    Status: string;
     Priority?: string;
     TaskStart?: string;
     TaskEnd?: string;
+    Category? : string;
     TaskFinish?: string;
     CreatedAt: string;
     Assignees: AssigneeDto[];

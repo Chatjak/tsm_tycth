@@ -1,8 +1,8 @@
 'use client'
 import { useEffect } from 'react';
-import {useAppDispatch} from "@/stores/hooks";
-import {useGetProfileQuery} from "@/stores/api/authApi";
-import {clearUser, setUser} from "@/stores/slices/auth/authSlice";
+import {useAppDispatch} from "@/stores/redux/hooks";
+import {useGetProfileQuery} from "@/stores/redux/api/authApi";
+import {clearUser, setUser} from "@/stores/redux/slices/auth/authSlice";
 
 
 const AuthInit = () => {
