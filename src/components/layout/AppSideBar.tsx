@@ -18,17 +18,17 @@ const AppSideBar = ({...props}:React.ComponentProps<typeof Sidebar>) => {
             navMain: [
                 {
                     title: "Home",
-                    url: "#",
+                    url: "/",
                     icon: HouseIcon,
                 },
                 {
                     title: "My Tasks",
-                    url: "#",
+                    url: "/me",
                     icon: LayoutListIcon,
                 },
                 {
                     title: "Projects",
-                    url: "#",
+                    url: "/project",
                     icon: FolderKanbanIcon,
                 },
             ],

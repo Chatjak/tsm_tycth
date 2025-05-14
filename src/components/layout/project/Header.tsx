@@ -1,28 +1,47 @@
-'use client'
-import React, { useState } from 'react';
+ 'use client'
+import React, {useEffect, useState} from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Plus, LayoutGrid, Table as TableIcon, List, CalendarDays, Menu, X } from 'lucide-react';
+import { Search, Filter, LayoutGrid, Table as TableIcon, List, CalendarDays, Menu, X } from 'lucide-react';
 import TabButton from "@/features/project/components/TabButton";
+import AddTaskComponent from "@/components/Protect/Home/Projects/[id]/AddTaskComponent";
+import {usePathname, useRouter} from "next/navigation";
+ import {useGetProjectByIdQuery} from "@/stores/redux/api/projectApi";
+
 
 const Header = ({ id, title = "Craftboard Project" } : { id: string, title?: string }) => {
     const [menuOpen, setMenuOpen] = useState(false);
+
+    const {data ,isLoading,isSuccess} = useGetProjectByIdQuery({id:id},{skip:!id})
+
+
+    if(isLoading){
+        return <div>Loading...</div>
+    }
+
+
+
+
 
     return (
         <div className="flex flex-col w-full">
             {/* Top header */}
             <div className="w-full bg-white p-4 md:p-6">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Craftboard</h1>
-                <p className="text-sm md:text-base text-gray-500 mt-1">Streamline HR Operations with our Dynamic Dashboard Solutions</p>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{data ? data[0]?.Name : '...'}</h1>
+                <p className="text-sm md:text-base text-gray-500 mt-1">{data ? data[0]?.Description : '...'}</p>
             </div>
 
             {/* Project title bar */}
             <div className="w-full bg-white flex items-center justify-between py-3 px-4">
                 <div className="flex items-center">
                     <div className="w-8 h-8 rounded-md bg-gray-100 text-gray-800 flex items-center justify-center mr-3">
-                        <span className="font-bold">C</span>
+                        <span className="font-bold">{
+                            data ? data[0]?.Name?.charAt(0).toUpperCase() || '?' : '...'
+                        }</span>
                     </div>
-                    <h2 className="text-lg md:text-xl font-semibold text-gray-800 truncate">{title}</h2>
+                    <h2 className="text-lg md:text-xl font-semibold text-gray-800 truncate">{
+                        data ? data[0]?.Name : '...'
+                    }</h2>
                 </div>
 
                 {/* Mobile menu button */}
@@ -41,7 +60,7 @@ const Header = ({ id, title = "Craftboard Project" } : { id: string, title?: str
             <div className={`w-full bg-white border-b transition-all duration-300 ease-in-out ${menuOpen ? 'flex flex-col' : 'hidden md:flex'} md:flex-row md:items-center md:justify-between px-4 py-2`}>
                 {/* Tabs */}
                 <div className="flex md:items-center overflow-x-auto scrollbar-hide py-2">
-                    <TabsWithCustomDesign />
+                    <TabsWithCustomDesign id={id} />
                 </div>
 
                 {/* Actions */}
@@ -62,10 +81,8 @@ const Header = ({ id, title = "Craftboard Project" } : { id: string, title?: str
                             <Filter className="w-4 h-4" />
                             <span className="hidden sm:inline">Filter</span>
                         </Button>
-                        <Button size="sm" className="h-9 flex items-center gap-1.5 bg-gray-900 text-white hover:bg-gray-800 ml-auto md:ml-0">
-                            <Plus className="w-4 h-4" />
-                            <span className="hidden sm:inline">New Task</span>
-                        </Button>
+
+                        <AddTaskComponent projectId={id}/>
                     </div>
                 </div>
             </div>
@@ -73,8 +90,22 @@ const Header = ({ id, title = "Craftboard Project" } : { id: string, title?: str
     );
 };
 
-const TabsWithCustomDesign = () => {
+const TabsWithCustomDesign = ({ id }: { id: string }) => {
+    const pathname = usePathname();
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState("kanban");
+
+    useEffect(() => {
+        if (pathname.endsWith("/table")) {
+            setActiveTab("table");
+        } else if (pathname.endsWith("/gantt")) {
+            setActiveTab("gantt");
+        } else if (pathname.endsWith("/calendar")) {
+            setActiveTab("calendar");
+        } else {
+            setActiveTab("kanban");
+        }
+    }, [pathname]);
 
     return (
         <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar">
@@ -83,28 +114,28 @@ const TabsWithCustomDesign = () => {
                 icon={<LayoutGrid className="w-4 h-4" />}
                 label="Kanban"
                 active={activeTab === "kanban"}
-                onClick={() => setActiveTab("kanban")}
+                onClick={() => router.push(`/project/${id}`)}
             />
             <TabButton
                 value="table"
                 icon={<TableIcon className="w-4 h-4" />}
                 label="Table"
                 active={activeTab === "table"}
-                onClick={() => setActiveTab("table")}
+                onClick={() => router.push(`/project/${id}/table`)}
             />
             <TabButton
-                value="list"
+                value="gantt"
                 icon={<List className="w-4 h-4" />}
-                label="List"
-                active={activeTab === "list"}
-                onClick={() => setActiveTab("list")}
+                label="Gantt"
+                active={activeTab === "gantt"}
+                onClick={() => router.push(`/project/${id}/gantt`)}
             />
             <TabButton
-                value="timeline"
+                value="calender"
                 icon={<CalendarDays className="w-4 h-4" />}
-                label="Timeline"
-                active={activeTab === "timeline"}
-                onClick={() => setActiveTab("timeline")}
+                label="Calender"
+                active={activeTab === "calendar"}
+                onClick={() => router.push(`/project/${id}/calendar`)}
             />
         </div>
     );

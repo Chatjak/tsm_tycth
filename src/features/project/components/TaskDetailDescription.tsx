@@ -1,14 +1,28 @@
 'use client'
 
-import React from 'react';
+import React, {useEffect} from 'react';
 import { TaskDto } from "@/features/project/types/projects.types";
-import { DatePicker, Select, Divider } from "antd";
-import { AlertTriangle, Calendar, LayoutList, Tag } from 'lucide-react';
+import {DatePicker, Select, Divider, message} from "antd";
+import { AlertTriangle, Calendar, LayoutList } from 'lucide-react';
 import dayjs from "dayjs";
+import {useUpdateTaskDueMutation, useUpdateTaskMutation} from "@/stores/redux/api/taskApi";
+
 
 const { RangePicker } = DatePicker;
 
 const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
+
+    const [updateTask, { isLoading, isSuccess }] = useUpdateTaskMutation();
+
+    const [updateTaskDue, { isSuccess: isSuccessDue }] = useUpdateTaskDueMutation();
+
+    useEffect(() => {
+        if (isSuccess || isSuccessDue) {
+            message.success("Task updated successfully");
+        }
+    }, [isSuccess,isSuccessDue]);
+
+
     const statusIcons = {
         'Not start': <div className="h-2 w-2 rounded-full bg-gray-400 mr-2" />,
         'On Progress': <div className="h-2 w-2 rounded-full bg-blue-500 mr-2" />,
@@ -23,16 +37,6 @@ const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
         'Normal': 'text-gray-600'
     };
 
-    // Added categories for the dropdown
-    const categories = [
-        { value: 'Development', label: 'Development' },
-        { value: 'Design', label: 'Design' },
-        { value: 'Documentation', label: 'Documentation' },
-        { value: 'Testing', label: 'Testing' },
-        { value: 'Research', label: 'Research' },
-        { value: 'Meeting', label: 'Meeting' },
-        { value: 'Other', label: 'Other' }
-    ];
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mt-6 transition-all hover:shadow-md">
@@ -41,9 +45,7 @@ const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
                 Task Details
             </h3>
             <Divider className="my-4" />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-x-8 gap-y-6">
-                {/* Status */}
+            <div className="grid grid-cols-1 md:grid-cols-1 2xl:grid-cols-3 gap-x-8 gap-y-6">
                 <div className="flex flex-col space-y-3">
                     <div className="text-xs text-gray-500 font-medium uppercase tracking-wider flex items-center">
                         Status
@@ -51,6 +53,16 @@ const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
                     <Select
                         defaultValue={task.Status}
                         className="w-full"
+                        onChange={async(value) => await updateTask({
+                            params : {id : task.Id},
+                            body: {
+                                column : 'status',
+                                id : task.Id,
+                                value,
+                                project_id : task.ProjectId
+                            }
+                        })}
+                        loading={isLoading}
                         size="large"
                         options={[
                             { value: 'Not start', label: (
@@ -75,8 +87,6 @@ const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
                         dropdownStyle={{ padding: '8px' }}
                     />
                 </div>
-
-                {/* Priority */}
                 <div className="flex flex-col space-y-3">
                     <div className="text-xs text-gray-500 font-medium uppercase tracking-wider flex items-center">
                         Priority
@@ -85,6 +95,16 @@ const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
                         defaultValue={task.Priority || 'Normal'}
                         className="w-full"
                         size="large"
+                        onChange={async(value) => await updateTask({
+                            params : {id : task.Id},
+
+                            body: {
+                                column : 'priority',
+                                id : task.Id,
+                                value,
+                                project_id : task.ProjectId
+                            }
+                        })}
                         options={[
                             { value: 'High', label: (
                                     <div className="flex items-center">
@@ -115,25 +135,6 @@ const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
                     />
                 </div>
 
-                {/* Category - New Field */}
-                <div className="flex flex-col space-y-3">
-                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wider flex items-center">
-                        Category
-                    </div>
-                    <Select
-                        defaultValue={task.Category || 'Development'}
-                        className="w-full"
-                        size="large"
-                        options={categories}
-                        suffixIcon={<Tag className="h-4 w-4 text-indigo-600" />}
-                        dropdownStyle={{ padding: '8px' }}
-                        showSearch
-                        placeholder="Select a category"
-                        optionFilterProp="label"
-                    />
-                </div>
-
-                {/* Timeline */}
                 <div className="flex flex-col space-y-3">
                     <div className="text-xs text-gray-500 font-medium uppercase tracking-wider flex items-center">
                         Timeline
@@ -147,6 +148,20 @@ const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
                             task.TaskEnd ? dayjs(task.TaskEnd) : null,
                         ]}
                         suffixIcon={<Calendar className="h-4 w-4 text-indigo-600" />}
+                        onChange={async (dates) => {
+                            if (!dates || !dates[0] || !dates[1]) return;
+
+                            await updateTaskDue({
+                                params: { id: task.Id },
+                                body: {
+                                    id: task.Id,
+                                    project_id: task.ProjectId,
+                                    start_date: dates[0].format('YYYY-MM-DD'),
+                                    end_date: dates[1].format('YYYY-MM-DD'),
+                                },
+                            });
+                        }}
+
                     />
                 </div>
             </div>

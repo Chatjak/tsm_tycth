@@ -24,11 +24,11 @@ interface NavMainProps  {
 const NavMain = ({items} :{items:NavMainProps[]}) => {
     const router = useRouter()
     return (
-        <SidebarGroup>
+        <SidebarGroup >
             <SidebarGroupContent className="flex flex-col gap-2">
-                <SidebarMenu>
+                <SidebarMenu >
                     {items.map((item) => (
-                        <SidebarMenuItem key={item.title} >
+                        <SidebarMenuItem key={item.title}  >
                             <SidebarMenuButton tooltip={item.title}
                             onClick={() => router.push(item.url)}
                             >

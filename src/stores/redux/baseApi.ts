@@ -7,10 +7,9 @@ export const baseApi = createApi({
         baseUrl: process.env.NEXT_PUBLIC_BACKEND_URL,
         credentials: 'include',
         prepareHeaders: (headers) => {
-            headers.set('Content-Type', 'application/json');
             return headers;
         },
     }),
-    tagTypes: ['User', 'Project', 'Task'],
+    tagTypes: ['User', 'Project', 'Task','Employee'],
     endpoints: () => ({}),
 });

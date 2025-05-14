@@ -11,6 +11,8 @@ const AuthInit = () => {
         refetchOnMountOrArgChange: true,
     });
 
+
+
     useEffect(() => {
         if (isSuccess && data) {
             dispatch(setUser(data));

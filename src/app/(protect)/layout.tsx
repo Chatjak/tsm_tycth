@@ -4,22 +4,25 @@ import AppSideBar from "@/components/layout/AppSideBar";
 import SiteHeader from "@/components/layout/SiteHeader";
 
 
-const Layout = ({children} : {children : ReactNode}) => {
+const Layout = ({children,modal} : {children : ReactNode,modal:ReactNode}) => {
     return (
-
+        <>
         <SidebarProvider>
             <AppSideBar/>
             <SidebarInset className={`overflow-hidden`}>
                 <SiteHeader/>
-                <div className="flex flex-1 flex-col max-w-full">
+                <div className="flex flex-1 flex-col max-w-full ">
                     <div className="flex flex-1 flex-col gap-2">
-                        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 ">
                             {children}
+                            {modal}
+
                         </div>
                     </div>
                 </div>
             </SidebarInset>
         </SidebarProvider>
+            </>
 
 
     );

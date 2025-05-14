@@ -20,17 +20,13 @@ import {AttachmentCard} from "@/features/project/components/AttachementCard";
 
 interface TaskDetailSheetProps {
     task: TaskDto  | null;
-    index: number
+    index: number;
+    onOpen: (task : TaskDto) => void;
 }
 
-const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({ task, index }) => {
-    const  [TasksDetailOpen,setTasksDetailOpen] = useState(false)
+const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({ task, index,onOpen }) => {
 
     if (!task) return null;
-
-
-    if(!task) return null;
-
 
     return (
         <>
@@ -41,15 +37,12 @@ const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({ task, index }) => {
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        onClick={() => setTasksDetailOpen(true)}
+                        onClick={() => onOpen(task)}
 
                     >
                         <div className="flex justify-between items-center mb-2">
                                                             <span className={`text-xs font-medium px-2 py-1 rounded-md border ${priorityColors[task.Priority || 'Normal'].badge}`}>
                                                                 {task.Priority || 'Normal'}
-                                                            </span>
-                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-mono">
-                                                                #{task.Id.toString().padStart(3, '0')}
                                                             </span>
                         </div>
 
@@ -104,55 +97,7 @@ const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({ task, index }) => {
                     </div>
                 )}
             </Draggable>
-            <Drawer
-                open={TasksDetailOpen}
-                onClose={() => setTasksDetailOpen(false)}
-                width="100%"
-                closeIcon={false}
-                bodyStyle={{ padding: '24px', backgroundColor: '#f9fafb' }}
 
-            >
-                <div className="max-w-5xl mx-auto space-y-8">
-                    <div className="border-b pb-4 mb-4">
-                        <h2 className="text-2xl font-bold">{task.Title}</h2>
-                        <div className="text-xs text-gray-500">
-                            Created at: {dayjs(task.CreatedAt).format('DD/MM/YYYY')}
-                        </div>
-                    </div>
-                    <TaskDetailDescription task={task} />
-                    {task.Assignees && (
-                        <section className="space-y-2">
-                            <h3 className="text-sm font-semibold text-gray-700">Assignees</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {task.Assignees.map((a, idx) => (
-                                    <div key={idx} className="flex items-center px-3 py-1.5 bg-white rounded-full border text-gray-700 text-sm">
-                                        <div className="w-7 h-7 rounded-full text-white bg-gray-400 flex items-center justify-center mr-2">
-                                            {a.EmpName?.charAt(0).toUpperCase()}
-                                        </div>
-                                        {a.EmpName}
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                    {task.Description && (
-                        <section className="space-y-2">
-                            <h3 className="text-sm font-semibold text-gray-700">Description</h3>
-                            <p className="p-4 bg-white rounded-md border text-sm text-gray-600">{task.Description}</p>
-                        </section>
-                    )}
-                    <section className="space-y-2">
-                        <h3 className="text-sm font-semibold text-gray-700">Attachments</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <AttachmentCard name="Design brief.pdf" size="1.5 MB" />
-                            <AttachmentCard name="Craftboard logo.ai" size="2.5 MB" />
-                            <Button variant="outline" className="col-span-2 flex justify-center border-dashed">
-                                <PlusIcon size={16} className="mr-2" /> Add Attachment
-                            </Button>
-                        </div>
-                    </section>
-                </div>
-            </Drawer>
             </>
     );
 };

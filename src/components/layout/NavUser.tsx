@@ -30,6 +30,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import React from 'react';
 import { useAppSelector } from "@/stores/redux/hooks";
+import {useLogoutMutation} from "@/stores/redux/api/authApi";
 
 const NavUserSkeleton = () => {
     return (
@@ -51,6 +52,7 @@ const NavUserSkeleton = () => {
 const NavUser = () => {
     const { isMobile } = useSidebar();
     const { user } = useAppSelector((state) => state.auth);
+    const [logout] = useLogoutMutation()
 
     if ( !user) {
         return <NavUserSkeleton />;
@@ -114,7 +116,10 @@ const NavUser = () => {
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={async() => {
+                            await logout().unwrap()
+
+                        }}>
                             <LogOutIcon className="mr-2 h-4 w-4" />
                             Log out
                         </DropdownMenuItem>

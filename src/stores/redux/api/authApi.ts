@@ -6,7 +6,7 @@ export const authApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         login: builder.mutation<void, { email: string; password: string }>({
             query: (body) => ({
-                url: '/auth/login',
+                url: '/api/auth/login',
                 method: 'POST',
                 body,
             }),
@@ -15,14 +15,14 @@ export const authApi = baseApi.injectEndpoints({
 
         logout: builder.mutation<void, void>({
             query: () => ({
-                url: '/auth/logout',
+                url: '/api/auth/logout',
                 method: 'POST',
             }),
             invalidatesTags: ['User'],
         }),
 
         getProfile: builder.query<User, void>({
-            query: () => '/auth/me',
+            query: () => '/api/auth/me',
             transformResponse: (response: { user: User }) => response.user,
             providesTags: ['User'],
         }),

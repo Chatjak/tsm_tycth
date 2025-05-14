@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     X,
     Calendar,
@@ -13,9 +13,7 @@ import {
     Clock8,
     Plus
 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-import {AssigneeDto, ProjectWithTasksDto, UserDto} from "@/features/project/types/projects.types";
+import {ProjectWithTasksDto} from "@/features/project/types/projects.types";
 
 import {
     Sheet,
@@ -26,38 +24,27 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet";
 import {message} from "antd";
+import {Button} from "@/components/ui/button";
+import {useGetProjectByIdQuery} from "@/stores/redux/api/projectApi";
+import {useGetEmployeesQuery} from "@/stores/redux/api/employeeApi";
+import {EmployeeDto} from "@/types/EmployeeDto";
+import {useCreateNewTaskMutation} from "@/stores/redux/api/taskApi";
 
 
-const getProject = async (projectId: string): Promise<ProjectWithTasksDto> => {
-    const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_BACKEND_IP}/api/projects/${projectId}`
-    );
-    return response.data;
-};
-
-const createTask = async (taskData :any) => {
-    const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_IP}/api/tasks`,
-        taskData
-    );
-    return response.data;
-};
 
 
-const getEmployee = async(): Promise<UserDto[]> => {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_IP}/api/users`);
-    return response.data;
-}
 
-const AddTaskComponent = ({ projectId }: { projectId: string }) => {
+
+
+
+const AddTaskComponent = ({ projectId ,parent_id}: { projectId: string, parent_id?: number }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [status, setStatus] = useState('Not start');
     const [priority, setPriority] = useState('Medium');
     const [startDate, setStartDate] = useState('');
     const [dueDate, setDueDate] = useState('');
-    const [remarks, setRemarks] = useState('');
-    const [selectedAssignees, setSelectedAssignees] = useState<UserDto[]>([]);
+    const [selectedAssignees, setSelectedAssignees] = useState<EmployeeDto[]>([]);
     const [attachedFiles, setAttachedFiles] = useState<{
         name: string;
         size: number;
@@ -67,43 +54,32 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
     const [showAssigneesDropdown, setShowAssigneesDropdown] = useState(false);
+    const [project,setProject] = useState<ProjectWithTasksDto>();
 
     const [isOpen, setIsOpen] = useState(false);
 
     const [assigneeSearch, setAssigneeSearch] = useState('');
 
+    const [createNewTask] = useCreateNewTaskMutation()
 
-    const queryClient = useQueryClient();
+    const { data, isLoading } = useGetProjectByIdQuery({ id:projectId });
 
-    const { data: project, isLoading } = useQuery({
-        queryKey: ['project', projectId],
-        queryFn: () => getProject(projectId),
-        enabled: isOpen, // Only fetch when the sheet is open
-    });
+    useEffect(() => {
+        if(data){
+        setProject(data[0]);
 
-    const {data : employees} = useQuery({
-        queryKey: ['employees'],
-        queryFn: () => getEmployee(),
-        enabled: isOpen,
-    })
+        }
+    }, [data]);
 
-    const createTaskMutation = useMutation({
-        mutationFn: createTask,
-        onSuccess: async() => {
-            message.success('Task created successfully');
-            await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-            resetForm();
-            setIsOpen(false);
-        },
-        onError: () => {
-            message.error('Failed to create task');
-        },
-    });
+
+    const {data: employees} = useGetEmployeesQuery()
+
+
 
 
     const statusOptions = [
         { id: 'not_start', name: 'Not start', icon: <Clock8 size={16} className="text-gray-500" /> },
-        { id: 'in_progress', name: 'In progress', icon: <Clock size={16} className="text-blue-500" /> },
+        { id: 'on_progress', name: 'On progress', icon: <Clock size={16} className="text-blue-500" /> },
         { id: 'over_due', name: 'Over due', icon: <AlertTriangle size={16} className="text-red-500" /> },
         { id: 'complete', name: 'Complete', icon: <CheckCircle size={16} className="text-green-500" /> }
     ];
@@ -114,24 +90,13 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
         { id: 'low', name: 'Low', color: 'bg-green-500', textColor: 'text-green-500' }
     ];
 
-    const resetForm = () => {
-        setTitle('');
-        setDescription('');
-        setStatus('Not start');
-        setPriority('Medium');
-        setStartDate('');
-        setDueDate('');
-        setRemarks('');
-        setSelectedAssignees([]);
-        setAttachedFiles([]);
-    };
 
     const getInitials = (name: string) => {
         if (!name) return '?';
         return name.split(' ').map((n) => n[0]).join('').toUpperCase();
     };
 
-    const handleAssigneeSelect = (user: UserDto) => {
+    const handleAssigneeSelect = (user: EmployeeDto) => {
         if (!selectedAssignees.some(assignee => assignee.id === user.id)) {
             setSelectedAssignees([...selectedAssignees, user]);
         }
@@ -189,24 +154,30 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
         setShowPriorityDropdown(false);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async(e: React.FormEvent) => {
         e.preventDefault();
 
         const taskData = {
-            projectId: parseInt(projectId),
+            projectId: (projectId),
             title,
             description,
             status,
             priority,
-            taskStart: startDate || undefined,
-            taskEnd: dueDate,
+            parent_task_id : parent_id ? parent_id : null,
+            taskStart: startDate || null,
+            taskEnd: dueDate || null,
             assignees: selectedAssignees.map(assignee => ({
                 id: assignee.id,
-                empName: assignee.empName
+                empName: assignee.emp_name
             }))
         };
 
-        createTaskMutation.mutate(taskData);
+        await createNewTask({body: taskData,params:{project_id:Number(projectId)}}).then( () => {
+            message.success('Task created successfully');
+            setIsOpen(false)
+        }).catch(err => {
+            message.error(err.data.message);
+        })
     };
 
     const getPriorityColor = (priorityName: string) => {
@@ -219,12 +190,12 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
         return statusOption ? statusOption.icon : <Clock8 size={16} className="text-gray-500" />;
     };
 
-    const filteredAssignees = () => {
+    const filteredAssignees  = () => {
         if (!employees) return [];
         if (!assigneeSearch) return employees;
 
         return employees.filter(assignee =>
-            assignee.empName.toLowerCase().includes(assigneeSearch.toLowerCase())
+            assignee.emp_name.toLowerCase().includes(assigneeSearch.toLowerCase())
         );
     };
 
@@ -232,24 +203,28 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
         <>
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
-                    <button
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
-                        onClick={() => setIsOpen(true)}
-                    >
-                        <Plus size={16} className="mr-2" />
-                        <span>Add Task</span>
-                    </button>
+                    {parent_id ? (
+                        <Button variant={'ghost'} size="sm" className="...">
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">Add Sub Task</span>
+                        </Button>
+                    ) : (
+                        <Button  size="sm" className="...">
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">New Task</span>
+                        </Button>
+                    )}
                 </SheetTrigger>
-                <SheetContent className="min-w-[80vw] overflow-auto ">
-                    <SheetHeader>
+                <SheetContent className="min-w-[100vw] z-[1000] h-screen"  side={'bottom'} >
+                    <SheetHeader className={`container mx-auto`}>
                         <SheetTitle>Add New Task</SheetTitle>
                         <SheetDescription>
-                            Create a new task for project: {project?.name || 'Loading...'}
+                            Create a new task for project: {project?.Name || 'Loading...'}
                         </SheetDescription>
                     </SheetHeader>
 
-                    <div className="p-6 relative">
-                        <form onSubmit={handleSubmit}>
+                    <div className="p-6 relative container mx-auto">
+                        <form onSubmit={async(e)=> await handleSubmit(e)}>
                             {/* Task Title */}
                             <div className="mb-6">
                                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
@@ -416,7 +391,7 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
                                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 value={dueDate}
                                                 onChange={(e) => setDueDate(e.target.value)}
-                                                required
+
                                             />
                                         </div>
                                     </div>
@@ -435,9 +410,9 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
                                         {selectedAssignees.map(assignee => (
                                             <div key={assignee.id} className="inline-flex items-center bg-blue-50 text-blue-700 rounded-full px-3 py-1 text-sm">
                                                 <div className="h-5 w-5 rounded-full bg-blue-200 flex items-center justify-center text-xs font-medium mr-1">
-                                                    {getInitials(assignee.empName)}
+                                                    {getInitials(assignee.emp_name)}
                                                 </div>
-                                                <span>{assignee.empName}</span>
+                                                <span>{assignee.emp_name}</span>
                                                 <button
                                                     type="button"
                                                     className="ml-1 text-blue-400 hover:text-blue-600"
@@ -481,7 +456,7 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
                                                 <div className="p-4 text-center text-gray-500">Loading assignees...</div>
                                             ) : (
                                                 <ul className="py-1">
-                                                    {filteredAssignees().map((user) => (
+                                                    {filteredAssignees().map((user:EmployeeDto) => (
                                                         <li
                                                             key={user.id}
                                                             className="cursor-pointer px-4 py-2 hover:bg-gray-100"
@@ -489,11 +464,11 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
                                                         >
                                                             <div className="flex items-center">
                                                                 <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium mr-3">
-                                                                    {getInitials(user.empName)}
+                                                                    {getInitials(user.emp_name)}
                                                                 </div>
                                                                 <div className="flex flex-col">
-                                                                    <span className="text-sm font-medium">{user.empName}</span>
-                                                                    <span className="text-xs text-gray-500">{user.empNo}</span>
+                                                                    <span className="text-sm font-medium">{user.emp_name}</span>
+                                                                    <span className="text-xs text-gray-500">{user.emp_no}</span>
                                                                 </div>
                                                             </div>
                                                         </li>
@@ -578,9 +553,9 @@ const AddTaskComponent = ({ projectId }: { projectId: string }) => {
                                     <button
                                         type="submit"
                                         className="px-4 py-2 border border-transparent rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium"
-                                        disabled={createTaskMutation.isPending || selectedAssignees.length === 0}
+                                        disabled={selectedAssignees.length === 0}
                                     >
-                                        {createTaskMutation.isPending ? 'Creating...' : 'Create Task'}
+                                        { 'Create Task'}
                                     </button>
                                 </div>
 

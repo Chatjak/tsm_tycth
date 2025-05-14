@@ -3,7 +3,8 @@ import LoginPage from "@/features/auth/components/SignInComponent";
 
 const Page = () => {
     return (
-       <LoginPage/>
+
+        <LoginPage/>
     );
 };
 

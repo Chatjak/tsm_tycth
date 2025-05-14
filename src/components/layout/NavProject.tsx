@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import {
     Forward,
     MoreHorizontal,
-    Trash2,
+    // Trash2,
     Plus,
 } from "lucide-react"
 import {
@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link";
 import { useGetProjectsMeQuery } from "@/stores/redux/api/projectApi";
+import AddProjectModal from "@/features/project/components/AddProjectModal";
+import DeleteProjectModalConfirm from "@/features/project/components/DeleteProjectModalConfirm";
 
 
 const ProjectSkeletons = () => {
@@ -56,18 +58,15 @@ const NavProject = () => {
             <SidebarGroup className="group-data-[collapsible=icon]:hidden px-2">
                 <div className="flex items-center justify-between mb-1 px-2">
                     <SidebarGroupLabel className="text-sm font-medium text-sidebar-foreground/70">Projects</SidebarGroupLabel>
-                    <Button variant="ghost" size="icon" className="w-6 h-6 rounded-full hover:bg-sidebar-highlight/20">
-                        <Plus className="w-4 h-4" />
-                        <span className="sr-only">Add Project</span>
-                    </Button>
+                    <AddProjectModal/>
                 </div>
                 <SidebarMenu className="space-y-1">
                     <div className="p-4 text-center text-muted-foreground">
                         <p className="mb-2">No projects found</p>
-                        <Button variant="outline" size="sm" className="w-full">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Create Project
-                        </Button>
+                        {/*<Button variant="outline" size="sm" className="w-full">*/}
+                        {/*    <Plus className="w-4 h-4 mr-2" />*/}
+                        {/*    Create Project*/}
+                        {/*</Button>*/}
                     </div>
                 </SidebarMenu>
             </SidebarGroup>
@@ -78,10 +77,7 @@ const NavProject = () => {
         <SidebarGroup className="group-data-[collapsible=icon]:hidden px-2">
             <div className="flex items-center justify-between mb-1 px-2">
                 <SidebarGroupLabel className="text-sm font-medium text-sidebar-foreground/70">Projects</SidebarGroupLabel>
-                <Button variant="ghost" size="icon" className="w-6 h-6 rounded-full hover:bg-sidebar-highlight/20">
-                    <Plus className="w-4 h-4" />
-                    <span className="sr-only">Add Project</span>
-                </Button>
+                <AddProjectModal/>
             </div>
             <SidebarMenu className="space-y-1">
                 {isLoading ? (
@@ -119,19 +115,16 @@ const NavProject = () => {
                                     align={isMobile ? "end" : "start"}
                                     sideOffset={8}
                                 >
-                                    <DropdownMenuItem className="cursor-pointer hover:bg-secondary">
+                                    <DropdownMenuItem className="cursor-pointer hover:bg-secondary" disabled={true}>
                                         <span className="w-4 h-4 mr-2 text-muted-foreground">📁</span>
                                         <span>View Project</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="cursor-pointer hover:bg-secondary">
+                                    <DropdownMenuItem className="cursor-pointer hover:bg-secondary" disabled={true}>
                                         <Forward className="w-4 h-4 mr-2 text-muted-foreground" />
                                         <span>Share Project</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="cursor-pointer text-destructive hover:bg-destructive/10">
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        <span>Delete Project</span>
-                                    </DropdownMenuItem>
+                                    <DeleteProjectModalConfirm id={item.Id}/>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </SidebarMenuItem>
