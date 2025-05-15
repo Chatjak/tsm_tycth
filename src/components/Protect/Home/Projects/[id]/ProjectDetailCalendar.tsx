@@ -4,10 +4,9 @@ import React, { useState } from 'react';
 import { ProjectWithTasksDto, TaskDto } from "@/features/project/types/projects.types";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/components/Protect/Home/Projects/[id]/ProjectDetailOverviewComponent";
-import { Empty, Spin, Select, Badge, Tooltip, Popover, Button, Tag } from "antd";
+import { Empty, Spin, Select, Badge, Popover, Button, Tag } from "antd";
 import {
     AlertCircle,
-    CheckCircle2,
     Circle,
     Clock,
     ChevronLeft,
@@ -40,17 +39,17 @@ const ProjectDetailCalendar = ({id} : {id:string}) => {
 
     // Organize tasks by date
     const organizeTasksByDate = () => {
-        if (!project || !project.tasks) return {};
+        if (!project || !project.TasksJson) return {};
 
         const tasksByDate: Record<string, TaskDto[]> = {};
 
-        project.tasks
+        project.TasksJson
             // Apply status filter if set
             .filter(task => statusFilter ?
-                (task.status?.toLowerCase() === statusFilter.toLowerCase()) : true)
+                (task.Status?.toLowerCase() === statusFilter.toLowerCase()) : true)
             .forEach(task => {
-                if (task.taskEnd) {
-                    const dateKey = new Date(task.taskEnd).toISOString().split('T')[0];
+                if (task.TaskEnd) {
+                    const dateKey = new Date(task.TaskEnd).toISOString().split('T')[0];
                     if (!tasksByDate[dateKey]) {
                         tasksByDate[dateKey] = [];
                     }
@@ -147,23 +146,23 @@ const ProjectDetailCalendar = ({id} : {id:string}) => {
     const taskPopoverContent = (task: TaskDto) => (
         <div className="w-72 max-w-full">
             <div className="mb-2 flex items-center justify-between">
-                <Tag color={getStatusColor(task.status)} className="flex items-center gap-1.5 px-2 py-1">
-                    {getStatusIcon(task.status)}
-                    <span>{task.status || 'Not start'}</span>
+                <Tag color={getStatusColor(task.Status)} className="flex items-center gap-1.5 px-2 py-1">
+                    {getStatusIcon(task.Status)}
+                    <span>{task.Status || 'Not start'}</span>
                 </Tag>
-                <Tag color={getPriorityColor(task.priority)}>{task.priority || 'Normal'}</Tag>
+                <Tag color={getPriorityColor(task.Priority)}>{task.Priority || 'Normal'}</Tag>
             </div>
-            <h4 className="text-sm font-semibold mb-1 text-gray-800">{task.title}</h4>
-            <p className="text-xs text-gray-600 mb-2">{task.description || 'No description'}</p>
+            <h4 className="text-sm font-semibold mb-1 text-gray-800">{task.Title}</h4>
+            <p className="text-xs text-gray-600 mb-2">{task.Description || 'No description'}</p>
             <div className="text-xs text-gray-500 flex items-center gap-4">
                 <div className="flex items-center">
                     <CalendarIcon size={12} className="mr-1" />
-                    <span>Due: {formatDate(task.taskEnd || '')}</span>
+                    <span>Due: {formatDate(task.TaskEnd || '')}</span>
                 </div>
-                {task.assignees && task.assignees.length > 0 && (
+                {task.Assignees && task.Assignees.length > 0 && (
                     <div className="flex items-center">
                         <Users size={12} className="mr-1" />
-                        <span>{task.assignees.length} assignee{task.assignees.length !== 1 ? 's' : ''}</span>
+                        <span>{task.Assignees.length} assignee{task.Assignees.length !== 1 ? 's' : ''}</span>
                     </div>
                 )}
             </div>
@@ -182,10 +181,10 @@ const ProjectDetailCalendar = ({id} : {id:string}) => {
 
     // Get task count for each status
     const getTaskStatusCounts = () => {
-        if (!project || !project.tasks) return { complete: 0, inProgress: 0, notStart: 0, overDue: 0 };
+        if (!project || !project.TasksJson) return { complete: 0, inProgress: 0, notStart: 0, overDue: 0 };
 
-        return project.tasks.reduce((acc, task) => {
-            const status = task.status?.toLowerCase() || 'not start';
+        return project.TasksJson.reduce((acc, task) => {
+            const status = task.Status?.toLowerCase() || 'not start';
 
             if (status === 'complete') acc.complete++;
             else if (status === 'in progress') acc.inProgress++;
@@ -201,8 +200,8 @@ const ProjectDetailCalendar = ({id} : {id:string}) => {
         // Sort tasks by priority (high to low)
         const priorityOrder: {[key: string]: number} = { 'high': 1, 'medium': 2, 'low': 3 };
         const sortedTasks = [...dayTasks].sort((a, b) => {
-            const priorityA = a.priority?.toLowerCase() || 'low';
-            const priorityB = b.priority?.toLowerCase() || 'low';
+            const priorityA = a.Priority?.toLowerCase() || 'low';
+            const priorityB = b.Priority?.toLowerCase() || 'low';
             return (priorityOrder[priorityA] || 999) - (priorityOrder[priorityB] || 999);
         });
 
@@ -210,22 +209,22 @@ const ProjectDetailCalendar = ({id} : {id:string}) => {
             <div className="space-y-1 overflow-auto max-h-28">
                 {sortedTasks.slice(0, 3).map((task, index) => (
                     <Popover
-                        key={`task-${task.id}-${index}`}
+                        key={`task-${task.Id}-${index}`}
                         content={() => taskPopoverContent(task)}
                         title={null}
                         placement="right"
                         trigger="hover"
                     >
                         <div
-                            className={`text-xs p-1.5 rounded-md border-l-4 bg-white border border-${getStatusColor(task.status)}-300 border-l-${getStatusColor(task.status)}-500 shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+                            className={`text-xs p-1.5 rounded-md border-l-4 bg-white border border-${getStatusColor(task.Status)}-300 border-l-${getStatusColor(task.Status)}-500 shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center truncate mr-1">
-                                    {getStatusIcon(task.status)}
-                                    <span className="ml-1 truncate font-medium">{task.title}</span>
+                                    {getStatusIcon(task.Status)}
+                                    <span className="ml-1 truncate font-medium">{task.Title}</span>
                                 </div>
-                                {task.priority && (
-                                    <div className={`w-2 h-2 rounded-full bg-${getPriorityColor(task.priority)}-500`}></div>
+                                {task.Priority && (
+                                    <div className={`w-2 h-2 rounded-full bg-${getPriorityColor(task.Priority)}-500`}></div>
                                 )}
                             </div>
                         </div>
@@ -285,7 +284,7 @@ const ProjectDetailCalendar = ({id} : {id:string}) => {
                 date.getMonth() === selectedDate.getMonth() &&
                 date.getFullYear() === selectedDate.getFullYear();
             const dayTasks = tasksByDate[dateString] || [];
-            const hasOverdueTasks = dayTasks.some(task => task.status?.toLowerCase() === 'over due');
+            const hasOverdueTasks = dayTasks.some(task => task.Status?.toLowerCase() === 'over due');
 
             calendarDays.push(
                 <div
@@ -365,23 +364,23 @@ const ProjectDetailCalendar = ({id} : {id:string}) => {
                 <div className="space-y-2">
                     {dayTasks.map((task) => (
                         <div
-                            key={task.id}
+                            key={task.Id}
                             className="p-3 border border-gray-200 rounded-lg bg-white hover:shadow-md transition-shadow"
                         >
                             <div className="flex items-start">
                                 <div className="mr-3 mt-1">
-                                    {getStatusIcon(task.status)}
+                                    {getStatusIcon(task.Status)}
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start">
-                                        <h5 className="font-medium text-gray-900">{task.title}</h5>
-                                        <Tag color={getPriorityColor(task.priority)}>{task.priority || 'Normal'}</Tag>
+                                        <h5 className="font-medium text-gray-900">{task.Title}</h5>
+                                        <Tag color={getPriorityColor(task.Priority)}>{task.Priority || 'Normal'}</Tag>
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-1">{task.description || 'No description'}</p>
-                                    {task.assignees && task.assignees.length > 0 && (
+                                    <p className="text-sm text-gray-600 mt-1">{task.Description || 'No description'}</p>
+                                    {task.Assignees && task.Assignees.length > 0 && (
                                         <div className="flex items-center text-xs text-gray-500 mt-2">
                                             <Users size={12} className="mr-1" />
-                                            <span>Assignees: {task.assignees.map(a => a.empName).join(', ')}</span>
+                                            <span>Assignees: {task.Assignees.map(a => a.EmpName).join(', ')}</span>
                                         </div>
                                     )}
                                 </div>
@@ -448,7 +447,7 @@ const ProjectDetailCalendar = ({id} : {id:string}) => {
                 <div className="flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-md px-3 py-1.5">
                         <BarChart size={16} className="text-indigo-500" />
-                        <span className="whitespace-nowrap">{project.tasks?.length || 0} total tasks</span>
+                        <span className="whitespace-nowrap">{project.TasksJson?.length || 0} total tasks</span>
                     </div>
 
                     <Select

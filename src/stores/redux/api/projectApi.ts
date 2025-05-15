@@ -34,6 +34,11 @@ export const projectApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: () =>
                 ['Project'],
+        }),
+        getAllProjects : builder.query<ProjectWithTasksDto[],void>({
+            query : () => '/api/projects',
+            providesTags: () =>
+                ['Project']
         })
 
     })
@@ -45,4 +50,5 @@ export const {
     useGetProjectByIdQuery,
     useCreateProjectMutation,
     useDeleteProjectMutation,
+    useGetAllProjectsQuery
 } = projectApi;

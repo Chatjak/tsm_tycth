@@ -1,10 +1,9 @@
 'use client'
 
-import React, { useState } from 'react';
+import React from 'react';
 import { TaskDto } from '@/features/project/types/projects.types';
 import dayjs from 'dayjs';
-import { Button } from '@/components/ui/button';
-import {CalendarIcon, PaperclipIcon, PlusIcon} from "lucide-react";
+import {CalendarIcon, } from "lucide-react";
 import {DocumentIcon} from "@/features/project/utils/iconUtils";
 import {Draggable} from "@hello-pangea/dnd";
 import {
@@ -12,20 +11,17 @@ import {
     getAvatarColor,
     priorityColors
 } from "@/features/project/utils/colorUtils";
-import TaskDetailDescription from "@/features/project/components/TaskDetailDescription";
-import {Drawer} from "antd";
-import {AttachmentCard} from "@/features/project/components/AttachementCard";
+import {useRouter} from "next/navigation";
 
 
 
 interface TaskDetailSheetProps {
     task: TaskDto  | null;
     index: number;
-    onOpen: (task : TaskDto) => void;
 }
 
-const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({ task, index,onOpen }) => {
-
+const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({ task, index }) => {
+    const router = useRouter();
     if (!task) return null;
 
     return (
@@ -37,7 +33,9 @@ const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({ task, index,onOpen })
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        onClick={() => onOpen(task)}
+                        onClick={() => {
+                            router.push(`/t/${task.Id}`);
+                        }}
 
                     >
                         <div className="flex justify-between items-center mb-2">

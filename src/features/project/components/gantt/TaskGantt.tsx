@@ -5,9 +5,10 @@ import { useGetProjectByIdQuery } from '@/stores/redux/api/projectApi';
 import { TaskDto, AssigneeDto } from '@/features/project/types/projects.types';
 import { Gantt, Task as GanttTask, ViewMode} from 'gantt-task-react';
 import 'gantt-task-react/dist/index.css';
-import { List, Loader2, AlertTriangle, Users, Flag, BarChart2, Clock, Tag } from 'lucide-react';
+import { List, Loader2, AlertTriangle} from 'lucide-react';
 import ProjectTimelineHeader from "@/features/project/components/gantt/ProjectTimelineHeader";
-import TaskDetailPanel from "@/features/project/components/gantt/TaskDetailPanel";
+
+import {useRouter} from "next/navigation";
 export interface ExtendedTask extends GanttTask {
     htmlName?: string; // for custom display
     description?: string;
@@ -23,6 +24,8 @@ const TaskGantt = ({ id }: { id: string }) => {
     const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<ExtendedTask | null>(null);
+
+    const router = useRouter()
 
 
     const viewModes = useMemo(() => [
@@ -52,8 +55,8 @@ const TaskGantt = ({ id }: { id: string }) => {
             setTaksfilter(data[0].TasksJson)
 
             const toGanttTask = (task: TaskDto, parentId?: string): ExtendedTask | null => {
-                const startStr = task.TaskStart ?? task.CreatedAt;
-                const endStr = task.TaskEnd ?? task.TaskStart ?? task.CreatedAt;
+                const startStr = task.TaskStart ?? null;
+                const endStr = task.TaskEnd ?? task.TaskStart ?? null
 
                 if (!startStr || !endStr) return null;
 
@@ -255,8 +258,8 @@ const TaskGantt = ({ id }: { id: string }) => {
                                 barCornerRadius={4}
                                 handleWidth={10}
                                 barFill={75}
-                                onSelect={(task:any) => setSelectedTask(task)}
-                                onDoubleClick={(task:any) => setSelectedTask(task)}
+                                onSelect={(task) =>router.push(`/t/${task.id}`)}
+                                onDoubleClick={(task) => router.push(`/t/${task.id}`)}
                                 TooltipContent={({ task } : {task:any}) => (
                                     <div className="p-3 min-w-64 bg-white shadow-lg rounded-md border border-gray-200">
                                         <div className="font-bold text-lg">{task.name}</div>
@@ -321,11 +324,7 @@ const TaskGantt = ({ id }: { id: string }) => {
                             />
                         </div>
 
-                        {/* Task details panel */}
-                        {selectedTask &&   <TaskDetailPanel setSelectedTask={setSelectedTask} selectedTask={selectedTask}
-                                                            tasks={
-                             data[0]?.TasksJson}
-                        />}
+
 
                     </>
                 ) : (

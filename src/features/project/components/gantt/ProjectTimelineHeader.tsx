@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { PieChart as ReChartPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import {TaskDto} from "@/features/project/types/projects.types";
+
 import {ExtendedTask} from "@/features/project/components/gantt/TaskGantt";
+import {ViewMode} from "gantt-task-react";
 
 const ProjectTimelineHeader = ({
                                    viewModes,
@@ -19,7 +20,7 @@ const ProjectTimelineHeader = ({
                                }: {
     viewModes: { label: string; value: string }[];
     viewMode: string;
-    setViewMode: (value: string) => void;
+    setViewMode: (value: any) => void;
     toggleFullScreen: () => void;
     isFullScreen: boolean;
     tasks: ExtendedTask[];
@@ -41,7 +42,7 @@ const ProjectTimelineHeader = ({
     ];
 
     return (
-        <div className="bg-muted/50 border-b px-6 py-5 rounded-t-xl shadow-sm">
+        <div className="bg-slate-50 border-b px-6 py-5 rounded-t-xl shadow-sm">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-2">

@@ -102,7 +102,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks }) => {
                 body: {
                     column: 'status',
                     value: destCol,
-                    project_id: updatedTask.ProjectId, // สมมติว่ามี field นี้
+                    project_id: updatedTask.ProjectId,
                     id: updatedTask.Id
                 }
             });
@@ -149,7 +149,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ tasks }) => {
                                         )}
                                         <div className="space-y-3">
                                             {columns[status]?.map((task, index) => (
-                                                <TaskDetailSheet key={index} task={task} index={index} onOpen={() => setSelectedTask(task)}/>
+                                                <TaskDetailSheet key={index} task={task} index={index}/>
                                             ))}
                                             {provided.placeholder}
 

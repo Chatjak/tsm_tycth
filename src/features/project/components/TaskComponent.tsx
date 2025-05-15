@@ -106,8 +106,8 @@ const TaskComponent = ({selectedTask, setSelectedTask} : TaskComponentProps) => 
             closeIcon={false}
             title={null}
             styles={{
-                body: { padding: 0, backgroundColor: '#f9fafb' },
-                mask: { backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+                body: {padding: 0, backgroundColor: '#f9fafb'},
+                mask: {backgroundColor: 'rgba(0, 0, 0, 0.6)'},
             }}
             className="task-detail-drawer"
         >

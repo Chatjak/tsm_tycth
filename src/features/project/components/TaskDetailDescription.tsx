@@ -1,171 +1,345 @@
 'use client'
 
-import React, {useEffect} from 'react';
+import React, { useEffect, useState } from 'react';
 import { TaskDto } from "@/features/project/types/projects.types";
-import {DatePicker, Select, Divider, message} from "antd";
-import { AlertTriangle, Calendar, LayoutList } from 'lucide-react';
+import { DatePicker, Select, message, Tooltip } from "antd";
+import { AlertTriangle, Calendar, LayoutList, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import dayjs from "dayjs";
-import {useUpdateTaskDueMutation, useUpdateTaskMutation} from "@/stores/redux/api/taskApi";
-
+import { useUpdateTaskDueMutation, useUpdateTaskMutation } from "@/stores/redux/api/taskApi";
+import { motion, AnimatePresence } from "framer-motion";
 
 const { RangePicker } = DatePicker;
 
 const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
-
     const [updateTask, { isLoading, isSuccess }] = useUpdateTaskMutation();
-
     const [updateTaskDue, { isSuccess: isSuccessDue }] = useUpdateTaskDueMutation();
+    const [hoverState, setHoverState] = useState<string | null>(null);
+    const [currentStatus, setCurrentStatus] = useState(task.Status || 'Not start');
+    const [currentPriority, setCurrentPriority] = useState(task.Priority || 'Normal');
 
     useEffect(() => {
         if (isSuccess || isSuccessDue) {
             message.success("Task updated successfully");
         }
-    }, [isSuccess,isSuccessDue]);
+    }, [isSuccess, isSuccessDue]);
 
+    const statusOptions = [
+        {
+            value: 'Not start',
+            label: 'Not start',
+            color: '#9CA3AF',
+            icon: <Clock className="h-4 w-4 mr-2" />
+        },
+        {
+            value: 'On Progress',
+            label: 'On Progress',
+            color: '#6366F1',
+            icon: <AlertCircle className="h-4 w-4 mr-2" />
+        },
+        {
+            value: 'Completed',
+            label: 'Completed',
+            color: '#10B981',
+            icon: <CheckCircle className="h-4 w-4 mr-2" />
+        }
+    ];
 
-    const statusIcons = {
-        'Not start': <div className="h-2 w-2 rounded-full bg-gray-400 mr-2" />,
-        'On Progress': <div className="h-2 w-2 rounded-full bg-blue-500 mr-2" />,
-        'In Review': <div className="h-2 w-2 rounded-full bg-amber-500 mr-2" />,
-        'Completed': <div className="h-2 w-2 rounded-full bg-green-500 mr-2" />
+    const priorityOptions = [
+        {
+            value: 'High',
+            label: 'High',
+            color: '#EF4444',
+            icon: <AlertTriangle className="h-4 w-4 mr-2" />
+        },
+        {
+            value: 'Medium',
+            label: 'Medium',
+            color: '#F59E0B',
+            icon: <AlertTriangle className="h-4 w-4 mr-2" />
+        },
+        {
+            value: 'Low',
+            label: 'Low',
+            color: '#3B82F6',
+            icon: <AlertTriangle className="h-4 w-4 mr-2" />
+        },
+        {
+            value: 'Normal',
+            label: 'Normal',
+            color: '#6B7280',
+            icon: <AlertTriangle className="h-4 w-4 mr-2" />
+        }
+    ];
+
+    const getStatusColor = (status: string) => {
+        const option = statusOptions.find(o => o.value === status);
+        return option ? option.color : '#9CA3AF';
     };
 
-    const priorityColors = {
-        'High': 'text-red-600',
-        'Medium': 'text-amber-600',
-        'Low': 'text-blue-600',
-        'Normal': 'text-gray-600'
+    const getPriorityColor = (priority: string) => {
+        const option = priorityOptions.find(o => o.value === priority);
+        return option ? option.color : '#6B7280';
     };
 
+    const handleStatusChange = async (value: string) => {
+        setCurrentStatus(value);
+        await updateTask({
+            params: { id: task.Id },
+            body: {
+                column: 'status',
+                id: task.Id,
+                value,
+                project_id: task.ProjectId
+            }
+        });
+    };
+
+    const handlePriorityChange = async (value: string) => {
+        setCurrentPriority(value);
+        await updateTask({
+            params: { id: task.Id },
+            body: {
+                column: 'priority',
+                id: task.Id,
+                value,
+                project_id: task.ProjectId
+            }
+        });
+    };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mt-6 transition-all hover:shadow-md">
-            <h3 className="text-lg font-medium text-gray-800 mb-5 flex items-center">
-                <LayoutList className="h-5 w-5 mr-2 text-indigo-600" />
-                Task Details
-            </h3>
-            <Divider className="my-4" />
-            <div className="grid grid-cols-1 md:grid-cols-1 2xl:grid-cols-3 gap-x-8 gap-y-6">
-                <div className="flex flex-col space-y-3">
-                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wider flex items-center">
-                        Status
-                    </div>
-                    <Select
-                        defaultValue={task.Status}
-                        className="w-full"
-                        onChange={async(value) => await updateTask({
-                            params : {id : task.Id},
-                            body: {
-                                column : 'status',
-                                id : task.Id,
-                                value,
-                                project_id : task.ProjectId
-                            }
-                        })}
-                        loading={isLoading}
-                        size="large"
-                        options={[
-                            { value: 'Not start', label: (
-                                    <div className="flex items-center">
-                                        {statusIcons['Not start']}
-                                        <span>Not start</span>
-                                    </div>
-                                )},
-                            { value: 'On Progress', label: (
-                                    <div className="flex items-center">
-                                        {statusIcons['On Progress']}
-                                        <span>On Progress</span>
-                                    </div>
-                                )},
-                            { value: 'Completed', label: (
-                                    <div className="flex items-center">
-                                        {statusIcons['Completed']}
-                                        <span>Completed</span>
-                                    </div>
-                                )},
-                        ]}
-                        dropdownStyle={{ padding: '8px' }}
-                    />
-                </div>
-                <div className="flex flex-col space-y-3">
-                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wider flex items-center">
-                        Priority
-                    </div>
-                    <Select
-                        defaultValue={task.Priority || 'Normal'}
-                        className="w-full"
-                        size="large"
-                        onChange={async(value) => await updateTask({
-                            params : {id : task.Id},
-
-                            body: {
-                                column : 'priority',
-                                id : task.Id,
-                                value,
-                                project_id : task.ProjectId
-                            }
-                        })}
-                        options={[
-                            { value: 'High', label: (
-                                    <div className="flex items-center">
-                                        <AlertTriangle className="h-4 w-4 mr-2 text-red-500" />
-                                        <span className={priorityColors['High']}>High</span>
-                                    </div>
-                                )},
-                            { value: 'Medium', label: (
-                                    <div className="flex items-center">
-                                        <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
-                                        <span className={priorityColors['Medium']}>Medium</span>
-                                    </div>
-                                )},
-                            { value: 'Low', label: (
-                                    <div className="flex items-center">
-                                        <AlertTriangle className="h-4 w-4 mr-2 text-blue-500" />
-                                        <span className={priorityColors['Low']}>Low</span>
-                                    </div>
-                                )},
-                            { value: 'Normal', label: (
-                                    <div className="flex items-center">
-                                        <AlertTriangle className="h-4 w-4 mr-2 text-gray-500" />
-                                        <span className={priorityColors['Normal']}>Normal</span>
-                                    </div>
-                                )},
-                        ]}
-                        dropdownStyle={{ padding: '8px' }}
-                    />
-                </div>
-
-                <div className="flex flex-col space-y-3">
-                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wider flex items-center">
-                        Timeline
-                    </div>
-                    <RangePicker
-                        className="w-full"
-                        size="large"
-                        placeholder={['Start Date', 'End Date']}
-                        value={[
-                            task.TaskStart ? dayjs(task.TaskStart) : null,
-                            task.TaskEnd ? dayjs(task.TaskEnd) : null,
-                        ]}
-                        suffixIcon={<Calendar className="h-4 w-4 text-indigo-600" />}
-                        onChange={async (dates) => {
-                            if (!dates || !dates[0] || !dates[1]) return;
-
-                            await updateTaskDue({
-                                params: { id: task.Id },
-                                body: {
-                                    id: task.Id,
-                                    project_id: task.ProjectId,
-                                    start_date: dates[0].format('YYYY-MM-DD'),
-                                    end_date: dates[1].format('YYYY-MM-DD'),
-                                },
-                            });
-                        }}
-
-                    />
-                </div>
+        <motion.div
+            className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+        >
+            <div className="bg-gradient-to-r from-violet-50 to-white px-6 py-4 border-b border-slate-200">
+                <h3 className="text-lg font-medium text-slate-800 flex items-center">
+                    <LayoutList className="h-5 w-5 mr-2 text-violet-600" />
+                    Task Details
+                </h3>
             </div>
-        </div>
+
+            <div className="p-5 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Status Section */}
+                    <motion.div
+                        className="flex flex-col space-y-3"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1, duration: 0.3 }}
+                        onMouseEnter={() => setHoverState('status')}
+                        onMouseLeave={() => setHoverState(null)}
+                    >
+                        <div className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center">
+                            Status
+                            <span
+                                className="ml-2 w-2 h-2 rounded-full"
+                                style={{ backgroundColor: getStatusColor(currentStatus) }}
+                            />
+                        </div>
+
+                        <Select
+                            value={currentStatus}
+                            className="w-full"
+                            onChange={handleStatusChange}
+                            loading={isLoading}
+                            size="large"
+                            bordered={true}
+                            popupClassName="modern-select-dropdown"
+                            dropdownStyle={{
+                                borderRadius: '0.75rem',
+                                padding: '8px',
+                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                            }}
+                            options={statusOptions.map(option => ({
+                                value: option.value,
+                                label: (
+                                    <div className="flex items-center py-1">
+                                        <div className="h-3 w-3 rounded-full mr-3" style={{ backgroundColor: option.color }} />
+                                        <span style={{ color: option.color, fontWeight: 500 }}>{option.label}</span>
+                                    </div>
+                                )
+                            }))}
+                        />
+
+                        <AnimatePresence>
+                            {hoverState === 'status' && (
+                                <motion.div
+                                    className="text-xs text-slate-500 mt-1"
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -5 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    Update the task status to track progress
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+
+                    {/* Priority Section */}
+                    <motion.div
+                        className="flex flex-col space-y-3"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2, duration: 0.3 }}
+                        onMouseEnter={() => setHoverState('priority')}
+                        onMouseLeave={() => setHoverState(null)}
+                    >
+                        <div className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center">
+                            Priority
+                            <Tooltip title={`Current: ${currentPriority}`}>
+                                <span
+                                    className="ml-2 w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: getPriorityColor(currentPriority) }}
+                                />
+                            </Tooltip>
+                        </div>
+
+                        <Select
+                            value={currentPriority}
+                            className="w-full"
+                            size="large"
+                            onChange={handlePriorityChange}
+                            bordered={true}
+                            popupClassName="modern-select-dropdown"
+                            dropdownStyle={{
+                                borderRadius: '0.75rem',
+                                padding: '8px',
+                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                            }}
+                            options={priorityOptions.map(option => ({
+                                value: option.value,
+                                label: (
+                                    <div className="flex items-center py-1">
+                                        <AlertTriangle className="h-4 w-4 mr-3" style={{ color: option.color }} />
+                                        <span style={{ color: option.color, fontWeight: 500 }}>{option.label}</span>
+                                    </div>
+                                )
+                            }))}
+                        />
+
+                        <AnimatePresence>
+                            {hoverState === 'priority' && (
+                                <motion.div
+                                    className="text-xs text-slate-500 mt-1"
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -5 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    Set the importance level of this task
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+
+                    {/* Timeline Section */}
+                    <motion.div
+                        className="flex flex-col space-y-3"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3, duration: 0.3 }}
+                        onMouseEnter={() => setHoverState('timeline')}
+                        onMouseLeave={() => setHoverState(null)}
+                    >
+                        <div className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center">
+                            <span>Timeline</span>
+                            {task.TaskStart && task.TaskEnd && (
+                                <Tooltip title={`${dayjs(task.TaskStart).format('MMM D')} - ${dayjs(task.TaskEnd).format('MMM D, YYYY')}`}>
+                                    <span className="ml-2 px-2 py-0.5 text-[10px] bg-violet-100 text-violet-700 rounded-full">
+                                        {dayjs(task.TaskEnd).diff(dayjs(task.TaskStart), 'day')} days
+                                    </span>
+                                </Tooltip>
+                            )}
+                        </div>
+
+                        <RangePicker
+                            className="w-full rounded-lg shadow-sm border-slate-200 focus:border-violet-500 hover:border-violet-400"
+                            size="large"
+                            placeholder={['Start Date', 'End Date']}
+                            value={[
+                                task.TaskStart ? dayjs(task.TaskStart) : null,
+                                task.TaskEnd ? dayjs(task.TaskEnd) : null,
+                            ]}
+                            suffixIcon={<Calendar className="h-4 w-4 text-violet-600" />}
+                            onChange={async (dates) => {
+                                if (!dates || !dates[0] || !dates[1]) return;
+
+                                await updateTaskDue({
+                                    params: { id: task.Id },
+                                    body: {
+                                        id: task.Id,
+                                        project_id: task.ProjectId,
+                                        start_date: dates[0].format('YYYY-MM-DD'),
+                                        end_date: dates[1].format('YYYY-MM-DD'),
+                                    },
+                                });
+                            }}
+                            popupStyle={{
+                                borderRadius: '0.75rem',
+                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                            }}
+                        />
+
+                        <AnimatePresence>
+                            {hoverState === 'timeline' && (
+                                <motion.div
+                                    className="text-xs text-slate-500 mt-1"
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -5 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    Set start and end dates for task scheduling
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                </div>
+
+                {/* Status Timeline Visualization - Optional advanced feature */}
+                {task.TaskStart && task.TaskEnd && (
+                    <motion.div
+                        className="mt-8 pt-6 border-t border-slate-100"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5, duration: 0.4 }}
+                    >
+                        <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Timeline Progress</div>
+                        <div className="relative pt-4">
+                            <div className="absolute left-0 right-0 h-2 bg-slate-100 rounded-full"></div>
+                            <div
+                                className="absolute left-0 h-2 bg-violet-500 rounded-full"
+                                style={{
+                                    width: `${Math.min(100, Math.max(0, (dayjs().diff(dayjs(task.TaskStart), 'day') / dayjs(task.TaskEnd).diff(dayjs(task.TaskStart), 'day')) * 100))}%`
+                                }}
+                            ></div>
+                            <div className="absolute top-0 -translate-x-1/2" style={{ left: '0%' }}>
+                                <div className="w-3 h-3 rounded-full bg-violet-500 border-2 border-white shadow-sm"></div>
+                                <div className="text-xs text-slate-600 mt-1 whitespace-nowrap">
+                                    {dayjs(task.TaskStart).format('MMM D')}
+                                </div>
+                            </div>
+                            <div className="absolute top-0 -translate-x-1/2" style={{ left: '100%' }}>
+                                <div className="w-3 h-3 rounded-full bg-violet-500 border-2 border-white shadow-sm"></div>
+                                <div className="text-xs text-slate-600 mt-1 whitespace-nowrap">
+                                    {dayjs(task.TaskEnd).format('MMM D')}
+                                </div>
+                            </div>
+                            <div className="absolute top-0 -translate-x-1/2" style={{
+                                left: `${Math.min(100, Math.max(0, (dayjs().diff(dayjs(task.TaskStart), 'day') / dayjs(task.TaskEnd).diff(dayjs(task.TaskStart), 'day')) * 100))}%`
+                            }}>
+                                <div className="w-3 h-3 rounded-full bg-violet-700 border-2 border-white shadow-sm"></div>
+                                <div className="text-xs text-violet-700 font-medium mt-1 whitespace-nowrap">Today</div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </div>
+        </motion.div>
     );
 };
 

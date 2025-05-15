@@ -1,4 +1,5 @@
 import { baseApi } from '../baseApi';
+import {TaskDto} from "@/features/task/dto/QueryTaskById";
 
 export interface TaskFile {
     id: string;
@@ -100,6 +101,15 @@ export const taskApi = baseApi.injectEndpoints({
             }),
         }),
 
+        QueryTaskById: builder.query<TaskDto[],{id:string}>({
+            query: ({ id }) => ({
+                url: `/api/tasks/${id}`,
+                method: 'GET',
+            }),
+            transformResponse: (response: TaskDto[]) => response[0] as TaskDto,
+            providesTags: () => ['Project'],
+        })
+
 
     }),
 });
@@ -111,4 +121,5 @@ export const {
     useUploadFileMutation,
     useGetFilesByIdQuery,
     useDownloadFileMutation,
+    useQueryTaskByIdQuery,
 } = taskApi;
