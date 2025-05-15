@@ -197,7 +197,7 @@ const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
                                         <div className="p-1">
                                             {!editDescription ? (
                                                 <div
-                                                    className={`p-4 md:p-5 min-h-[120px] text-sm text-slate-600 transition-all duration-200 ${isHoveringDesc ? 'bg-violet-50/40' : ''}`}
+                                                    className={`p-4 md:p-5 min-h-[120px] text-sm  whitespace-pre-line text-slate-600 transition-all duration-200 ${isHoveringDesc ? 'bg-violet-50/40' : ''}`}
                                                     onMouseEnter={() => setIsHoveringDesc(true)}
                                                     onMouseLeave={() => setIsHoveringDesc(false)}
                                                     onClick={() => setEditDescription(true)}

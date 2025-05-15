@@ -300,44 +300,6 @@ const TaskDetailDescription = ({ task }: { task: TaskDto }) => {
                     </motion.div>
                 </div>
 
-                {/* Status Timeline Visualization - Optional advanced feature */}
-                {task.TaskStart && task.TaskEnd && (
-                    <motion.div
-                        className="mt-8 pt-6 border-t border-slate-100"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.5, duration: 0.4 }}
-                    >
-                        <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Timeline Progress</div>
-                        <div className="relative pt-4">
-                            <div className="absolute left-0 right-0 h-2 bg-slate-100 rounded-full"></div>
-                            <div
-                                className="absolute left-0 h-2 bg-violet-500 rounded-full"
-                                style={{
-                                    width: `${Math.min(100, Math.max(0, (dayjs().diff(dayjs(task.TaskStart), 'day') / dayjs(task.TaskEnd).diff(dayjs(task.TaskStart), 'day')) * 100))}%`
-                                }}
-                            ></div>
-                            <div className="absolute top-0 -translate-x-1/2" style={{ left: '0%' }}>
-                                <div className="w-3 h-3 rounded-full bg-violet-500 border-2 border-white shadow-sm"></div>
-                                <div className="text-xs text-slate-600 mt-1 whitespace-nowrap">
-                                    {dayjs(task.TaskStart).format('MMM D')}
-                                </div>
-                            </div>
-                            <div className="absolute top-0 -translate-x-1/2" style={{ left: '100%' }}>
-                                <div className="w-3 h-3 rounded-full bg-violet-500 border-2 border-white shadow-sm"></div>
-                                <div className="text-xs text-slate-600 mt-1 whitespace-nowrap">
-                                    {dayjs(task.TaskEnd).format('MMM D')}
-                                </div>
-                            </div>
-                            <div className="absolute top-0 -translate-x-1/2" style={{
-                                left: `${Math.min(100, Math.max(0, (dayjs().diff(dayjs(task.TaskStart), 'day') / dayjs(task.TaskEnd).diff(dayjs(task.TaskStart), 'day')) * 100))}%`
-                            }}>
-                                <div className="w-3 h-3 rounded-full bg-violet-700 border-2 border-white shadow-sm"></div>
-                                <div className="text-xs text-violet-700 font-medium mt-1 whitespace-nowrap">Today</div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
             </div>
         </motion.div>
     );

@@ -5,4 +5,6 @@ export interface User {
     emp_no: string;
     profile?: string;
     email: string;
+    job_title:string;
+    employee_id:string;
 }

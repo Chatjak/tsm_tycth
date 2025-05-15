@@ -28,6 +28,11 @@ const nextConfig = {
             }
         ];
     },
+    images: {
+        domains: [
+            'vdudlwqsrucojxjpqhvq.supabase.co', // ← เพิ่มตรงนี้
+        ],
+    },
 };
 
 export default nextConfig;
