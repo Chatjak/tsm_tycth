@@ -117,6 +117,14 @@ export const taskApi = baseApi.injectEndpoints({
                 method: 'GET',
             }),
             providesTags: () => ['Project'],
+        }),
+
+        QueryReviewByMe : builder.query<QueryTaskByMe[],void>({
+            query: () => ({
+                url: '/api/tasks/review/me',
+                method: 'GET',
+            }),
+            providesTags: () => ['Project'],
         })
 
 
@@ -132,4 +140,5 @@ export const {
     useDownloadFileMutation,
     useQueryTaskByIdQuery,
     useQueryTaskByMeQuery,
+    useQueryReviewByMeQuery
 } = taskApi;

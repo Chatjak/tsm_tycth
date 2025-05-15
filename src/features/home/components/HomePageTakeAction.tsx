@@ -278,14 +278,14 @@ const HomePageTakeAction = ({ actionTasks }: {
                                             Not Started
                                         </button>
                                         <button
-                                            onClick={() => toggleStatusFilter('On progress')}
+                                            onClick={() => toggleStatusFilter('On Progress')}
                                             className={`px-3 py-1.5 text-xs rounded-full transition-all ${
-                                                filterOptions.status.includes('On progress')
+                                                filterOptions.status.includes('On Progress')
                                                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm'
                                                     : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
                                             }`}
                                         >
-                                            On progress
+                                            On Progress
                                         </button>
                                         <button
                                             onClick={() => toggleStatusFilter('Completed')}

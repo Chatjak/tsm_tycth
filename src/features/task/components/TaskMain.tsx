@@ -19,6 +19,7 @@ import {useGetFilesByIdQuery, useUpdateTaskMutation} from "@/stores/redux/api/ta
 import {AssigneeDto} from "@/features/project/types/projects.types";
 import {useRouter} from "next/navigation";
 import MessageComponent from "@/features/project/components/MessageComponent";
+import TaskAction from "@/features/task/components/TaskAction";
 
 const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
     const [updateTask, { isLoading, isSuccess }] = useUpdateTaskMutation();
@@ -69,13 +70,11 @@ const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
         }
     };
 
-    // Function to generate a random pastel color based on name
     const getColorFromName = (name: string) => {
         const hue = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360;
         return `hsl(${hue}, 70%, 85%)`;
     };
 
-    // Status badge component with appropriate color
     const StatusBadge = ({ status }: { status: string }) => {
         let bgColor = "bg-slate-100";
         let textColor = "text-slate-700";
@@ -154,6 +153,13 @@ const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
                                     Details
                                 </TabsTrigger>
                                 <TabsTrigger
+                                    value="review"
+                                    className="flex-1 data-[state=active]:bg-violet-500 data-[state=active]:text-white rounded-lg transition-all duration-200 ease-in-out"
+                                >
+                                    Action & Approve
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    disabled={true}
                                     value="activity"
                                     className="flex-1 data-[state=active]:bg-violet-500 data-[state=active]:text-white rounded-lg transition-all duration-200 ease-in-out"
                                 >
@@ -456,6 +462,11 @@ const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
                                             Add Comment
                                         </Button>
                                     </motion.div>
+                                </TabsContent>
+
+
+                                <TabsContent value={'review'} className="space-y-6">
+                                    <TaskAction/>
                                 </TabsContent>
                             </AnimatePresence>
                         </Tabs>
