@@ -17,7 +17,7 @@ import AddTaskComponent from "@/components/Protect/Home/Projects/[id]/AddTaskCom
 import dayjs from "dayjs";
 import {useGetFilesByIdQuery, useUpdateTaskMutation} from "@/stores/redux/api/taskApi";
 import {AssigneeDto} from "@/features/project/types/projects.types";
-import {useRouter} from "next/navigation";
+import {useRouter, useSearchParams} from "next/navigation";
 import MessageComponent from "@/features/project/components/MessageComponent";
 import TaskAction from "@/features/task/components/TaskAction";
 
@@ -26,8 +26,10 @@ const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
     const [editDescription, setEditDescription] = useState(false);
     const [desc, setDesc] = useState<string | null>(null);
     const [isHoveringDesc, setIsHoveringDesc] = useState(false);
-    const [activeTab, setActiveTab] = useState('details');
-
+    const searchParams = useSearchParams();
+    const q = searchParams.get("q");
+    const defaultTab = q === "review" ? "review" : "details";
+    const [activeTab, setActiveTab] = useState(defaultTab);
     const [isMobile, setIsMobile] = useState(false);
     const router = useRouter();
 
@@ -172,10 +174,7 @@ const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
                                     value="details"
                                     className="space-y-6 md:space-y-8"
                                 >
-                                    {/* Task meta info - Task Detail Description component */}
                                     <TaskDetailDescription task={selectedTask}/>
-
-                                    {/* Description */}
                                     <motion.section
                                         className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md"
                                         initial={{ opacity: 0, y: 20 }}
@@ -358,7 +357,6 @@ const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
                                         </div>
                                     </motion.section>
 
-                                    {/* Sub-Tasks */}
                                     <motion.section
                                         className="bg-white/95 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md"
                                         initial={{ opacity: 0, y: 20 }}
@@ -466,7 +464,7 @@ const TaskMain = ({selectedTask} : {selectedTask:TaskDto}) => {
 
 
                                 <TabsContent value={'review'} className="space-y-6">
-                                    <TaskAction/>
+                                    <TaskAction task_id={selectedTask.Id}/>
                                 </TabsContent>
                             </AnimatePresence>
                         </Tabs>

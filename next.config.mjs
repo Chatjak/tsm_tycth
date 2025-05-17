@@ -25,6 +25,10 @@ const nextConfig = {
             {
                 source:'/api/message/:path*',
                 destination: process.env.NEXT_PUBLIC_BACKEND_IP + '/message/:path*',
+            },
+            {
+                source:'/api/actions/:path*',
+                destination: process.env.NEXT_PUBLIC_BACKEND_IP + '/actions/:path*',
             }
         ];
     },

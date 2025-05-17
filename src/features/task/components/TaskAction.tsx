@@ -1,752 +1,735 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     Typography,
     Button,
     Input,
-    Select,
     DatePicker,
     Space,
-    Divider,
     Tag,
     Row,
     Col,
     Avatar,
-    Modal,
-    Form,
     List,
-    Upload,
-    Steps,
-    Tabs,
-    message,
-    Comment,
-    Tooltip,
-    Badge
+    Drawer,
+    Menu,
+    Dropdown,
+    Radio,
+    Checkbox,
+    ConfigProvider, Badge, Empty
 } from 'antd';
 import {
-    PaperClipOutlined,
-    SendOutlined,
-    ClockCircleOutlined,
-    CheckOutlined,
-    CloseOutlined,
-    MessageOutlined,
-    LinkOutlined,
-    PictureOutlined,
-    FileOutlined,
     CalendarOutlined,
-    SyncOutlined,
-    UploadOutlined,
-    InboxOutlined,
-    UserOutlined
+    TeamOutlined,
+    FilterOutlined,
+    SearchOutlined,
+    BarsOutlined,
+    AppstoreOutlined,
+    SortAscendingOutlined, UserOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import {buttonStyles, theme} from "@/features/task/utils/StyleUtils";
+import TaskCreateDrawer from "@/features/task/components/TaskCreateAction";
+import { useGetActionListQuery} from "@/stores/redux/api/actionApi";
+import {ActionDetails} from "@/features/action/dto/ActionDtoSchema";
+import {createAvatar} from "@/features/home/utils/TaskReviewUtils";
+import {getPriorityColor, getStatusColor, getStatusIcon} from "@/features/task/utils/TaskActionUtils";
+import {useRouter} from "next/navigation"; // นำเข้าจากคอมโพเนนต์เดิม
 
 dayjs.extend(relativeTime);
 dayjs.locale('th');
 
 const { Title, Text, Paragraph } = Typography;
-const { TextArea } = Input;
-const { Step } = Steps;
-const { TabPane } = Tabs;
-const { Dragger } = Upload;
+const { RangePicker } = DatePicker;
 
-// Purple theme colors
-const theme = {
-    primaryColor: '#7b61ff',
-    secondaryColor: '#f6f5ff'
+
+interface Filters {
+    search: string;
+    status: string[];
+    priority: string[];
+    category: string[];
+    dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
+    assignee: string[];
+    assigner: string[];
+}
+
+
+const cardStyles = {
+    borderRadius: '16px',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+    overflow: 'hidden',
+    border: 'none'
 };
 
-const TaskAction = ({ task, currentUser = 'Chatjak', isAssigner = false }) => {
-    // Current date from the user's input
-    const currentDate = dayjs('2025-05-15 15:57:59');
 
-    // Demo task data
-    const [taskData, setTaskData] = useState(task || {
-        id: 'TASK-2025-001',
-        title: 'Create Q2 Marketing Campaign',
-        description: 'Develop a comprehensive marketing campaign for the second quarter focusing on our new product line.',
-        status: 'Not Started', // Not Started, In Progress, Waiting Review, Completed, Rejected
-        dueDate: '2025-05-30T10:00:00Z',
-        createdAt: '2025-05-10T09:00:00Z',
-        assignee: {
-            id: 'user123',
-            name: 'Chatjak',
-            avatar: 'https://xsgames.co/randomusers/avatar.php?g=male'
-        },
-        assigner: {
-            id: 'manager456',
-            name: 'Somchai',
-            avatar: 'https://xsgames.co/randomusers/avatar.php?g=male&i=2'
-        },
-        activities: [
-            {
-                type: 'status_change',
-                from: null,
-                to: 'Not Started',
-                timestamp: '2025-05-10T09:00:00Z',
-                user: 'Somchai'
-            }
-        ],
-        comments: []
+
+
+const TaskActionList = ({task_id }:{task_id:string}) => {
+    const currentDate = dayjs();
+
+
+    const {data:tasks } = useGetActionListQuery({task_id})
+
+    const [viewMode, setViewMode] = useState('card'); // 'card' or 'list'
+
+    // Filter states
+    const [filters, setFilters] = useState<Filters>({
+        search: '',
+        status: [],
+        priority: [],
+        category: [],
+        dateRange: null,
+        assignee: [],
+        assigner: [],
     });
 
-    const [activeTab, setActiveTab] = useState('1'); // '1' for action tab, '2' for review tab
-    const [progress, setProgress] = useState('');
-    const [extensionRequest, setExtensionRequest] = useState({ reason: '', newDate: null });
-    const [showExtensionModal, setShowExtensionModal] = useState(false);
-    const [rejectionReason, setRejectionReason] = useState('');
-    const [showRejectionModal, setShowRejectionModal] = useState(false);
-    const [fileList, setFileList] = useState([]);
-    const [comment, setComment] = useState('');
-    const [links, setLinks] = useState([]);
-    const [newLink, setNewLink] = useState('');
-    const [showLinkModal, setShowLinkModal] = useState(false);
 
-    // Status management
-    const updateStatus = (newStatus) => {
-        const timestamp = currentDate.toISOString();
+    const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+    const [sortBy, setSortBy] = useState('dueDate'); // 'dueDate', 'createdAt', 'priority'
+    const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
 
-        setTaskData(prev => ({
-            ...prev,
-            status: newStatus,
-            activities: [
-                ...prev.activities,
-                {
-                    type: 'status_change',
-                    from: prev.status,
-                    to: newStatus,
-                    timestamp,
-                    user: currentUser
-                }
-            ]
-        }));
+    const [filteredTasks, setFilteredTasks] = useState<ActionDetails[]>([...(tasks ?? [])]);
+    const router = useRouter();
 
-        message.success(`สถานะถูกเปลี่ยนเป็น ${newStatus} เรียบร้อยแล้ว`);
-    };
 
-    // Calculate delay in days
-    const calculateDelay = () => {
-        if (!taskData.dueDate) return 0;
+    const uniqueStatuses: string[] = [...new Set(tasks?.map(task => task.status))];
+    const uniquePriorities: string[] = [...new Set(tasks?.map(task => task.priority))];
 
-        const dueDate = dayjs(taskData.dueDate);
+    const uniqueAssignees: string[] = [
+        ...new Set(tasks?.flatMap(task => task.assignee?.map(user => user.emp_name) || []))
+    ].filter((name): name is string => Boolean(name));
 
-        if (currentDate <= dueDate) return 0;
+    const uniqueAssigners: string[] = [
+        ...new Set(tasks?.map(task => task.assigner?.emp_name).filter((name): name is string => Boolean(name)))
+    ];
 
-        const diffDays = currentDate.diff(dueDate, 'day');
-        return diffDays;
-    };
+    useEffect(() => {
+        let result = [...tasks ?? []];
 
-    // Handle file upload
-    const handleFileUpload = (info) => {
-        let newFileList = [...info.fileList];
-
-        // Limit the number of files if needed
-        // newFileList = newFileList.slice(-5);
-
-        setFileList(newFileList);
-    };
-
-    // Handle link addition
-    const handleAddLink = () => {
-        if (newLink.trim()) {
-            setLinks([...links, { url: newLink.trim(), addedAt: currentDate.toISOString() }]);
-            setNewLink('');
-            setShowLinkModal(false);
-            message.success('เพิ่มลิงก์เรียบร้อยแล้ว');
+        if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            result = result.filter(
+                task =>
+                    task.title.toLowerCase().includes(searchLower) ||
+                    task.description.toLowerCase().includes(searchLower)
+            );
         }
-    };
 
-    // Handle submit for review
-    const handleSubmitForReview = () => {
-        // Update progress and status
-        const timestamp = currentDate.toISOString();
-
-        setTaskData(prev => ({
-            ...prev,
-            status: 'Waiting Review',
-            activities: [
-                ...prev.activities,
-                {
-                    type: 'action_completed',
-                    details: progress,
-                    attachments: fileList.length,
-                    links: links.length,
-                    timestamp,
-                    user: currentUser
-                },
-                {
-                    type: 'status_change',
-                    from: prev.status,
-                    to: 'Waiting Review',
-                    timestamp,
-                    user: currentUser
-                }
-            ]
-        }));
-
-        message.success('ส่งงานเพื่อตรวจสอบเรียบร้อยแล้ว');
-    };
-
-    // Handle approval
-    const handleApprove = () => {
-        const timestamp = currentDate.toISOString();
-
-        setTaskData(prev => ({
-            ...prev,
-            status: 'Completed',
-            activities: [
-                ...prev.activities,
-                {
-                    type: 'approval',
-                    timestamp,
-                    user: currentUser
-                },
-                {
-                    type: 'status_change',
-                    from: prev.status,
-                    to: 'Completed',
-                    timestamp,
-                    user: currentUser
-                }
-            ]
-        }));
-
-        message.success('อนุมัติงานเรียบร้อยแล้ว');
-    };
-
-    // Handle rejection
-    const handleReject = () => {
-        if (!rejectionReason.trim()) return;
-
-        const timestamp = currentDate.toISOString();
-
-        setTaskData(prev => ({
-            ...prev,
-            status: 'In Progress',
-            activities: [
-                ...prev.activities,
-                {
-                    type: 'rejection',
-                    reason: rejectionReason,
-                    timestamp,
-                    user: currentUser
-                },
-                {
-                    type: 'status_change',
-                    from: prev.status,
-                    to: 'In Progress',
-                    timestamp,
-                    user: currentUser
-                }
-            ]
-        }));
-
-        setRejectionReason('');
-        setShowRejectionModal(false);
-        message.error('งานถูกส่งกลับเพื่อแก้ไข');
-    };
-
-    // Handle extension request
-    const handleExtensionRequest = () => {
-        if (!extensionRequest.reason.trim() || !extensionRequest.newDate) return;
-
-        const timestamp = currentDate.toISOString();
-
-        setTaskData(prev => ({
-            ...prev,
-            activities: [
-                ...prev.activities,
-                {
-                    type: 'extension_request',
-                    reason: extensionRequest.reason,
-                    requestedDate: extensionRequest.newDate.format('YYYY-MM-DD'),
-                    timestamp,
-                    user: currentUser
-                }
-            ]
-        }));
-
-        setExtensionRequest({ reason: '', newDate: null });
-        setShowExtensionModal(false);
-        message.info('ส่งคำขอขยายเวลาเรียบร้อยแล้ว');
-    };
-
-    // Handle adding comment
-    const handleAddComment = () => {
-        if (!comment.trim()) return;
-
-        const timestamp = currentDate.toISOString();
-
-        setTaskData(prev => ({
-            ...prev,
-            comments: [
-                ...prev.comments,
-                {
-                    id: `comment-${Date.now()}`,
-                    text: comment,
-                    timestamp,
-                    user: {
-                        name: currentUser,
-                        avatar: 'https://xsgames.co/randomusers/avatar.php?g=male'
-                    }
-                }
-            ]
-        }));
-
-        setComment('');
-        message.success('เพิ่มความคิดเห็นเรียบร้อยแล้ว');
-    };
-
-    // Format date for display
-    const formatDate = (dateString) => {
-        return dayjs(dateString).format('D MMMM YYYY เวลา HH:mm น.');
-    };
-
-    // Get current step number for stepper
-    const getCurrentStep = () => {
-        switch(taskData.status) {
-            case 'Not Started': return 0;
-            case 'In Progress': return 1;
-            case 'Waiting Review': return 2;
-            case 'Completed': return 3;
-            case 'Rejected': return 1; // Goes back to In Progress
-            default: return 0;
+        if (filters.status.length > 0) {
+            result = result.filter(task => filters.status.includes(task.status));
         }
+
+        if (filters.priority.length > 0) {
+            result = result.filter(task => filters.priority.includes(task.priority));
+        }
+
+        if (filters.dateRange && filters.dateRange[0] && filters.dateRange[1]) {
+            const startDate = filters.dateRange[0].startOf('day');
+            const endDate = filters.dateRange[1].endOf('day');
+
+            result = result.filter(task => {
+                const taskDueDate = dayjs(task.due_date);
+                return taskDueDate.isAfter(startDate) && taskDueDate.isBefore(endDate);
+            });
+        }
+
+        if (filters.assignee.length > 0) {
+            result = result.filter(task =>
+                task.assignee?.some(user => filters.assignee.includes(user.emp_name))
+            );
+        }
+
+
+        if (filters.assigner.length > 0) {
+            result = result.filter(task => filters.assigner.includes(task.assigner?.emp_name));
+        }
+
+        result.sort((a, b) => {
+            let valA, valB
+
+            switch (sortBy) {
+                case 'dueDate':
+                    valA = new Date(a.due_date);
+                    valB = new Date(b.due_date);
+                    break;
+                case 'createdAt':
+                    valA = new Date(a.created_at);
+                    valB = new Date(b.created_at);
+                    break;
+                case 'priority':
+                    const priorityValues = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                    valA = priorityValues[a.priority] || 0;
+                    valB = priorityValues[b.priority] || 0;
+                    break;
+                case 'title':
+                    valA = a.title;
+                    valB = b.title;
+                    break;
+                default:
+                    valA = new Date(a.due_date);
+                    valB = new Date(b.due_date);
+            }
+
+            if (sortOrder === 'asc') {
+                return valA > valB ? 1 : -1;
+            } else {
+                return valA < valB ? 1 : -1;
+            }
+        });
+
+        setFilteredTasks(result);
+    }, [tasks, filters, sortBy, sortOrder]);
+    const resetFilters = () => {
+        setFilters({
+            search: '',
+            status: [],
+            priority: [],
+            category: [],
+            dateRange: null,
+            assignee: [],
+            assigner: []
+        });
     };
 
-    // Get status tag color
-    const getStatusColor = (status) => {
-        switch(status) {
-            case 'Not Started': return 'default';
-            case 'In Progress': return 'processing';
-            case 'Waiting Review': return 'warning';
-            case 'Completed': return 'success';
-            case 'Rejected': return 'error';
-            default: return 'default';
-        }
+    const calculateDaysRemaining = (dueDate:string) => {
+        if (!dueDate) return { days: 0, isOverdue: false };
+
+        const dueDateObj = dayjs(dueDate);
+        const diffDays = dueDateObj.diff(currentDate, 'day');
+
+        return {
+            days: Math.abs(diffDays),
+            isOverdue: diffDays < 0
+        };
     };
+
+
+
+    const handleSortMenuClick = ({ key } ) => {
+        const [field, order] = key.split('-');
+        setSortBy(field);
+        setSortOrder(order);
+    };
+
+    const sortMenu = (
+        <Menu onClick={handleSortMenuClick}>
+            <Menu.ItemGroup title="วันที่ครบกำหนด">
+                <Menu.Item key="dueDate-asc">เร็วที่สุดไปช้าที่สุด</Menu.Item>
+                <Menu.Item key="dueDate-desc">ช้าที่สุดไปเร็วที่สุด</Menu.Item>
+            </Menu.ItemGroup>
+            <Menu.ItemGroup title="วันที่สร้าง">
+                <Menu.Item key="createdAt-asc">เก่าที่สุดไปใหม่ที่สุด</Menu.Item>
+                <Menu.Item key="createdAt-desc">ใหม่ที่สุดไปเก่าที่สุด</Menu.Item>
+            </Menu.ItemGroup>
+            <Menu.ItemGroup title="ความสำคัญ">
+                <Menu.Item key="priority-desc">สูงไปต่ำ</Menu.Item>
+                <Menu.Item key="priority-asc">ต่ำไปสูง</Menu.Item>
+            </Menu.ItemGroup>
+            <Menu.ItemGroup title="ชื่องาน">
+                <Menu.Item key="title-asc">A-Z</Menu.Item>
+                <Menu.Item key="title-desc">Z-A</Menu.Item>
+            </Menu.ItemGroup>
+        </Menu>
+    );
+
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '16px' }}>
-            <Card
-                title={
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                            <Title level={4} style={{ marginBottom: '8px' }}>{taskData.title}</Title>
-                            <Paragraph type="secondary">{taskData.description}</Paragraph>
-                        </div>
-                        <Tag color={getStatusColor(taskData.status)} style={{ fontSize: '14px' }}>
-                            {taskData.status}
-                        </Tag>
-                    </div>
+        <ConfigProvider
+            theme={{
+                token: {
+                    colorPrimary: theme.primaryColor,
+                    borderRadius: 8,
                 }
-                style={{ borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
-            >
-                {/* Task Info */}
-                <Row gutter={16} style={{ marginBottom: '24px' }}>
-                    <Col span={12}>
-                        <Text strong>มอบหมายโดย:</Text> {taskData.assigner.name}
-                        <br />
-                        <Text strong>ผู้รับผิดชอบ:</Text> {taskData.assignee.name}
-                    </Col>
-                    <Col span={12}>
-                        <Text strong>สร้างเมื่อ:</Text> {formatDate(taskData.createdAt)}
-                        <br />
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <Text strong>กำหนดส่ง:</Text> {formatDate(taskData.dueDate)}
-                            {calculateDelay() > 0 && (
-                                <Tag color="error" style={{ marginLeft: '8px' }}>
-                                    <ClockCircleOutlined /> ล่าช้า {calculateDelay()} วัน
+            }}
+        >
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+
+                <Card
+                    style={{
+                        ...cardStyles,
+                        marginBottom: '24px'
+                    }}
+                    bodyStyle={{ padding: '16px 20px' }}
+                >
+                    <Row gutter={[16, 16]} align="middle">
+                        <Col xs={24} md={8} lg={10}>
+                            <Input
+                                placeholder="ค้นหางาน..."
+                                prefix={<SearchOutlined />}
+                                value={filters.search}
+                                onChange={(e) => setFilters({...filters, search: e.target.value})}
+                                style={{
+                                    borderRadius: '8px',
+                                    height: '40px'
+                                }}
+                                allowClear
+                            />
+                        </Col>
+                        <Col xs={24} md={16} lg={14}>
+                            <Row justify="end" gutter={[12, 12]}>
+                                <Col>
+                                    <Button
+                                        type="default"
+                                        onClick={() => setShowFilterDrawer(true)}
+                                        icon={<FilterOutlined />}
+                                        style={{
+                                            ...buttonStyles.secondary,
+                                            borderColor: Object.values(filters).some(val =>
+                                                Array.isArray(val) ? val.length > 0 : Boolean(val)
+                                            ) ? theme.primaryColor : undefined,
+                                            color: Object.values(filters).some(val =>
+                                                Array.isArray(val) ? val.length > 0 : Boolean(val)
+                                            ) ? theme.primaryColor : undefined
+                                        }}
+                                    >
+                                        ตัวกรอง
+                                        {Object.values(filters).some(val =>
+                                            Array.isArray(val) ? val.length > 0 : Boolean(val)
+                                        ) && (
+                                            <Badge
+                                                count={
+                                                    Object.values(filters).reduce((count, val) => {
+                                                        if (Array.isArray(val)) {
+                                                            return count + (val.length > 0 ? 1 : 0);
+                                                        }
+                                                        return count + (Boolean(val) ? 1 : 0);
+                                                    }, 0)
+                                                }
+                                                style={{
+                                                    backgroundColor: theme.primaryColor,
+                                                    marginLeft: '5px'
+                                                }}
+                                            />
+                                        )}
+                                    </Button>
+                                </Col>
+                                <Col>
+                                    <Dropdown overlay={sortMenu} placement="bottomRight">
+                                        <Button
+                                            type="default"
+                                            icon={<SortAscendingOutlined />}
+                                            style={buttonStyles.secondary}
+                                        >
+                                            จัดเรียง
+                                        </Button>
+                                    </Dropdown>
+                                </Col>
+                                <Col>
+                                    <Radio.Group
+                                        value={viewMode}
+                                        onChange={(e) => setViewMode(e.target.value)}
+                                        buttonStyle="solid"
+                                    >
+                                        <Radio.Button value="card">
+                                            <AppstoreOutlined />
+                                        </Radio.Button>
+                                        <Radio.Button value="list">
+                                            <BarsOutlined />
+                                        </Radio.Button>
+                                    </Radio.Group>
+                                </Col>
+                                <Col>
+                                    <TaskCreateDrawer/>
+                                </Col>
+                            </Row>
+                        </Col>
+                    </Row>
+                </Card>
+
+                {Object.values(filters).some(val => Array.isArray(val) ? val.length > 0 : Boolean(val)) && (
+                    <div style={{ marginBottom: '16px' }}>
+                        <Space wrap>
+                            {filters.search && (
+                                <Tag
+                                    closable
+                                    onClose={() => setFilters({...filters, search: ''})}
+                                    style={{ borderRadius: '4px', padding: '4px 8px' }}
+                                >
+                                    <SearchOutlined /> {filters.search}
                                 </Tag>
                             )}
-                        </div>
-                    </Col>
-                </Row>
 
-                {/* Workflow Steps */}
-                <Steps current={getCurrentStep()} style={{ marginBottom: '32px' }}>
-                    <Step title="Not Started" />
-                    <Step title="In Progress" />
-                    <Step title="Waiting Review" />
-                    <Step title="Completed" />
-                </Steps>
+                            {filters.status.map(status => (
+                                <Tag
+                                    key={status}
+                                    closable
+                                    color={getStatusColor(status)}
+                                    onClose={() => setFilters({
+                                        ...filters,
+                                        status: filters.status.filter(s => s !== status)
+                                    })}
+                                    style={{ borderRadius: '4px', padding: '4px 8px' }}
+                                >
+                                    สถานะ: {status}
+                                </Tag>
+                            ))}
 
-                {/* Tabs */}
-                <Tabs
-                    defaultActiveKey="1"
-                    onChange={setActiveTab}
-                    style={{
-                        marginBottom: '24px',
-                        '& .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn': { color: theme.primaryColor },
-                        '& .ant-tabs-ink-bar': { backgroundColor: theme.primaryColor }
-                    }}
-                >
-                    <TabPane tab="ดำเนินการงาน" key="1">
-                        {/* Status Controls - only show for non-completed tasks */}
-                        {taskData.status !== 'Completed' && (
-                            <div style={{ marginBottom: '24px' }}>
-                                <Title level={5}>ปรับสถานะงาน</Title>
-                                <Space>
-                                    {taskData.status === 'Not Started' && (
-                                        <Button
-                                            type="primary"
-                                            onClick={() => updateStatus('In Progress')}
-                                            style={{ backgroundColor: theme.primaryColor, borderColor: theme.primaryColor }}
+                            {filters.priority.map(priority => (
+                                <Tag
+                                    key={priority}
+                                    closable
+                                    color={getPriorityColor(priority)}
+                                    onClose={() => setFilters({
+                                        ...filters,
+                                        priority: filters.priority.filter(p => p !== priority)
+                                    })}
+                                    style={{ borderRadius: '4px', padding: '4px 8px' }}
+                                >
+                                    ความสำคัญ: {priority}
+                                </Tag>
+                            ))}
+
+                            {filters.category.map(category => (
+                                <Tag
+                                    key={category}
+                                    closable
+                                    onClose={() => setFilters({
+                                        ...filters,
+                                        category: filters.category.filter(c => c !== category)
+                                    })}
+                                    style={{ borderRadius: '4px', padding: '4px 8px' }}
+                                >
+                                    หมวดหมู่: {category}
+                                </Tag>
+                            ))}
+
+                            {filters.dateRange && filters.dateRange[0] && filters.dateRange[1] && (
+                                <Tag
+                                    closable
+                                    onClose={() => setFilters({...filters, dateRange: null})}
+                                    style={{ borderRadius: '4px', padding: '4px 8px' }}
+                                >
+                                    <CalendarOutlined /> {filters.dateRange[0].format('DD/MM/YYYY')} - {filters.dateRange[1].format('DD/MM/YYYY')}
+                                </Tag>
+                            )}
+
+                            {filters.assignee.map(assignee => (
+                                <Tag
+                                    key={assignee}
+                                    closable
+                                    onClose={() => setFilters({
+                                        ...filters,
+                                        assignee: filters.assignee.filter(a => a !== assignee)
+                                    })}
+                                    style={{ borderRadius: '4px', padding: '4px 8px' }}
+                                >
+                                    <UserOutlined /> {assignee}
+                                </Tag>
+                            ))}
+
+                            {filters.assigner.map(assigner => (
+                                <Tag
+                                    key={assigner}
+                                    closable
+                                    onClose={() => setFilters({
+                                        ...filters,
+                                        assigner: filters.assigner.filter(a => a !== assigner)
+                                    })}
+                                    style={{ borderRadius: '4px', padding: '4px 8px' }}
+                                >
+                                    <TeamOutlined /> {assigner}
+                                </Tag>
+                            ))}
+
+                            <Button
+                                type="link"
+                                onClick={resetFilters}
+                                style={{ padding: '0px 8px' }}
+                            >
+                                ล้างตัวกรองทั้งหมด
+                            </Button>
+                        </Space>
+                    </div>
+                )}
+
+                {/* Task list or grid */}
+                {filteredTasks.length > 0 ? (
+                    viewMode === 'card' ? (
+                        <Row gutter={[16, 16]}>
+                            {filteredTasks.map(task => (
+                                <Col xs={24} sm={12} lg={8} key={task.id}>
+                                    <Card
+                                        style={{
+                                            borderRadius: '12px',
+                                            height: '100%',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.3s ease',
+                                            border: '1px solid #f0f0f0'
+                                        }}
+                                        bodyStyle={{ padding: '16px' }}
+                                        hoverable
+                                        onClick={() => router.push('/a/'+task.id)}
+                                    >
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '12px'
+                                        }}>
+                                            <Tag
+                                                color={getStatusColor(task.status)}
+                                                style={{ borderRadius: '4px' }}
+                                            >
+                                                {getStatusIcon(task.status)} {task.status}
+                                            </Tag>
+                                            <Tag
+                                                color={getPriorityColor(task.priority)}
+                                                style={{ borderRadius: '4px' }}
+                                            >
+                                                {task.priority}
+                                            </Tag>
+                                        </div>
+
+                                        <Title level={5} style={{ margin: '0 0 8px', lineHeight: '1.4' }}>
+                                            {task.title}
+                                        </Title>
+
+                                        <Paragraph
+                                            ellipsis={{ rows: 2 }}
+                                            type="secondary"
+                                            style={{ marginBottom: '16px', fontSize: '14px' }}
                                         >
-                                            เริ่มดำเนินการ
-                                        </Button>
-                                    )}
+                                            {task.description}
+                                        </Paragraph>
 
-                                    {(taskData.status === 'In Progress' || taskData.status === 'Rejected') && (
-                                        <Button
-                                            type="primary"
-                                            onClick={handleSubmitForReview}
-                                            disabled={!progress.trim()}
-                                            style={{ backgroundColor: theme.primaryColor, borderColor: theme.primaryColor }}
-                                        >
-                                            ส่งตรวจสอบ
-                                        </Button>
-                                    )}
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '12px'
+                                        }}>
+                                            <Text type="secondary" style={{ fontSize: '13px' }}>
+                                                <CalendarOutlined style={{ marginRight: '5px' }} />
+                                                {dayjs(task.due_date).format('D MMM YYYY')}
+                                            </Text>
+                                        </div>
 
-                                    {taskData.status !== 'Completed' && taskData.status !== 'Waiting Review' && (
-                                        <Button
-                                            icon={<CalendarOutlined />}
-                                            onClick={() => setShowExtensionModal(true)}
-                                        >
-                                            ขอขยายเวลา
-                                        </Button>
-                                    )}
-                                </Space>
-                            </div>
-                        )}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                {task.assignee?.map(user => (
+                                                  <>
+                                                      {user.profile ? <Avatar src={user.profile || undefined} size="small" style={{ marginRight: '8px' }} />
+                                                          :
+                                                          createAvatar(user.emp_name,user.emp_email)
+                                                      }
+                                                  </>
+                                                ))}
+                                            </div>
 
-                        {/* Task Progress Input - only show for in progress tasks */}
-                        {(taskData.status === 'In Progress' || taskData.status === 'Rejected') && (
-                            <div style={{ marginBottom: '24px' }}>
-                                <Title level={5}>บันทึกผลการดำเนินงาน</Title>
-                                <TextArea
-                                    rows={4}
-                                    value={progress}
-                                    onChange={(e) => setProgress(e.target.value)}
-                                    placeholder="รายละเอียดผลการดำเนินงาน"
-                                    style={{ marginBottom: '16px' }}
-                                />
-
-                                {/* File attachments */}
-                                <div style={{ marginBottom: '16px' }}>
-                                    <Title level={5}>แนบไฟล์/ภาพ</Title>
-                                    <div style={{ marginBottom: '8px' }}>
-                                        <Upload
-                                            fileList={fileList}
-                                            onChange={handleFileUpload}
-                                            multiple={true}
-                                            beforeUpload={() => false} // Prevent auto upload
-                                            showUploadList={false}
-                                        >
-                                            <Button icon={<PaperClipOutlined />}>เลือกไฟล์</Button>
-                                        </Upload>
-                                        <Text type="secondary" style={{ marginLeft: '8px' }}>
-                                            สามารถแนบได้หลายไฟล์
-                                        </Text>
-                                    </div>
-
-                                    {/* Display attachments */}
-                                    {fileList.length > 0 && (
-                                        <List
-                                            bordered
-                                            dataSource={fileList}
-                                            renderItem={(file, index) => (
-                                                <List.Item
-                                                    actions={[
-                                                        <Button
-                                                            type="text"
-                                                            danger
-                                                            icon={<CloseOutlined />}
-                                                            onClick={() => setFileList(fileList.filter((_, i) => i !== index))}
-                                                        />
-                                                    ]}
-                                                >
-                                                    <List.Item.Meta
-                                                        avatar={
-                                                            <Avatar icon={
-                                                                file.type && file.type.includes('image') ?
-                                                                    <PictureOutlined /> : <FileOutlined />
-                                                            } />
-                                                        }
-                                                        title={file.name}
-                                                        description={`${(file.size / 1024).toFixed(1)} KB`}
-                                                    />
-                                                </List.Item>
+                                            {calculateDaysRemaining(task.due_date).isOverdue && task.status !== 'Completed' ? (
+                                                <Tag color="error" style={{ borderRadius: '4px', fontSize: '12px' }}>
+                                                    ล่าช้า {calculateDaysRemaining(task.due_date).days} วัน
+                                                </Tag>
+                                            ) : (
+                                                task.status !== 'Completed' && (
+                                                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                        {calculateDaysRemaining(task.due_date).days} วันที่เหลือ
+                                                    </Text>
+                                                )
                                             )}
-                                        />
-                                    )}
-                                </div>
+                                        </div>
 
-                                {/* Link attachments */}
-                                <div style={{ marginBottom: '16px' }}>
-                                    <Title level={5}>แนบลิงก์</Title>
-                                    <Button
-                                        icon={<LinkOutlined />}
-                                        onClick={() => setShowLinkModal(true)}
-                                        style={{ marginBottom: '8px' }}
+                                    </Card>
+                                </Col>
+                            ))}
+                        </Row>
+                    ) : (
+                        <Card
+                            style={{
+                                ...cardStyles,
+                                padding: 0,
+                            }}
+                            bodyStyle={{ padding: 0 }}
+                        >
+                            <List
+                                dataSource={filteredTasks}
+                                renderItem={task => (
+                                    <List.Item
+                                        key={task.id}
+                                        style={{
+                                            padding: '16px 20px',
+                                            cursor: 'pointer',
+                                            transition: 'background-color 0.3s ease',
+                                            borderBottom: '1px solid #f0f0f0'
+                                        }}
+                                        onClick={() => router.push('/a/'+task.id)}
                                     >
-                                        เพิ่มลิงก์
-                                    </Button>
-
-                                    {/* Display links */}
-                                    {links.length > 0 && (
-                                        <List
-                                            bordered
-                                            dataSource={links}
-                                            renderItem={(link, index) => (
-                                                <List.Item
-                                                    actions={[
-                                                        <Button
-                                                            type="text"
-                                                            danger
-                                                            icon={<CloseOutlined />}
-                                                            onClick={() => setLinks(links.filter((_, i) => i !== index))}
-                                                        />
-                                                    ]}
+                                        <List.Item.Meta
+                                            avatar={
+                                                <Avatar
+                                                    style={{
+                                                        backgroundColor: getStatusColor(task.status),
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
                                                 >
-                                                    <List.Item.Meta
-                                                        avatar={<Avatar icon={<LinkOutlined />} style={{ backgroundColor: theme.primaryColor }} />}
-                                                        title={
-                                                            <a href={link.url} target="_blank" rel="noopener noreferrer">
-                                                                {link.url}
-                                                            </a>
-                                                        }
-                                                    />
-                                                </List.Item>
-                                            )}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Extension Request Modal */}
-                        <Modal
-                            title="ขอขยายเวลาดำเนินการ"
-                            open={showExtensionModal}
-                            onCancel={() => setShowExtensionModal(false)}
-                            footer={[
-                                <Button key="cancel" onClick={() => setShowExtensionModal(false)}>
-                                    ยกเลิก
-                                </Button>,
-                                <Button
-                                    key="submit"
-                                    type="primary"
-                                    onClick={handleExtensionRequest}
-                                    disabled={!extensionRequest.reason || !extensionRequest.newDate}
-                                    style={{ backgroundColor: theme.primaryColor, borderColor: theme.primaryColor }}
-                                >
-                                    ส่งคำขอ
-                                </Button>
-                            ]}
-                        >
-                            <Form layout="vertical">
-                                <Form.Item label="เหตุผลที่ขอขยายเวลา" required>
-                                    <TextArea
-                                        rows={3}
-                                        value={extensionRequest.reason}
-                                        onChange={(e) => setExtensionRequest({ ...extensionRequest, reason: e.target.value })}
-                                    />
-                                </Form.Item>
-                                <Form.Item label="วันที่ต้องการขยายเวลา" required>
-                                    <DatePicker
-                                        style={{ width: '100%' }}
-                                        value={extensionRequest.newDate}
-                                        onChange={(date) => setExtensionRequest({ ...extensionRequest, newDate: date })}
-                                        format="DD/MM/YYYY"
-                                    />
-                                </Form.Item>
-                            </Form>
-                        </Modal>
-
-                        {/* Link Modal */}
-                        <Modal
-                            title="เพิ่มลิงก์"
-                            open={showLinkModal}
-                            onCancel={() => setShowLinkModal(false)}
-                            footer={[
-                                <Button key="cancel" onClick={() => setShowLinkModal(false)}>
-                                    ยกเลิก
-                                </Button>,
-                                <Button
-                                    key="submit"
-                                    type="primary"
-                                    onClick={handleAddLink}
-                                    disabled={!newLink.trim()}
-                                    style={{ backgroundColor: theme.primaryColor, borderColor: theme.primaryColor }}
-                                >
-                                    เพิ่ม
-                                </Button>
-                            ]}
-                        >
-                            <Form layout="vertical">
-                                <Form.Item label="URL" required>
-                                    <Input
-                                        placeholder="https://example.com"
-                                        value={newLink}
-                                        onChange={(e) => setNewLink(e.target.value)}
-                                        prefix={<LinkOutlined />}
-                                    />
-                                </Form.Item>
-                            </Form>
-                        </Modal>
-                    </TabPane>
-
-                    <TabPane tab="Review & Approval" key="2">
-                        {/* Review Controls - Only for assigner and when task is waiting review */}
-                        {isAssigner && taskData.status === 'Waiting Review' && (
-                            <div style={{ marginBottom: '24px' }}>
-                                <Title level={5}>ตรวจสอบและอนุมัติ</Title>
-                                <Space>
-                                    <Button
-                                        type="primary"
-                                        style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-                                        icon={<CheckOutlined />}
-                                        onClick={handleApprove}
-                                    >
-                                        อนุมัติ
-                                    </Button>
-                                    <Button
-                                        danger
-                                        icon={<CloseOutlined />}
-                                        onClick={() => setShowRejectionModal(true)}
-                                    >
-                                        ไม่อนุมัติ
-                                    </Button>
-                                </Space>
-                            </div>
-                        )}
-
-                        {/* Rejection Modal */}
-                        <Modal
-                            title="เหตุผลที่ไม่อนุมัติ"
-                            open={showRejectionModal}
-                            onCancel={() => setShowRejectionModal(false)}
-                            footer={[
-                                <Button key="cancel" onClick={() => setShowRejectionModal(false)}>
-                                    ยกเลิก
-                                </Button>,
-                                <Button
-                                    key="submit"
-                                    type="primary"
-                                    danger
-                                    onClick={handleReject}
-                                    disabled={!rejectionReason.trim()}
-                                >
-                                    ไม่อนุมัติ
-                                </Button>
-                            ]}
-                        >
-                            <Form layout="vertical">
-                                <Form.Item label="เหตุผล" required>
-                                    <TextArea
-                                        rows={3}
-                                        value={rejectionReason}
-                                        onChange={(e) => setRejectionReason(e.target.value)}
-                                    />
-                                </Form.Item>
-                            </Form>
-                        </Modal>
-
-                        {/* Comments Section */}
-                        <div style={{ marginBottom: '24px' }}>
-                            <Title level={5}>ความคิดเห็น</Title>
-                            <div style={{ display: 'flex', marginBottom: '16px', gap: '8px' }}>
-                                <TextArea
-                                    rows={2}
-                                    value={comment}
-                                    onChange={(e) => setComment(e.target.value)}
-                                    placeholder="เพิ่มความคิดเห็น..."
-                                    style={{ flex: 1 }}
-                                />
-                                <Button
-                                    type="primary"
-                                    icon={<SendOutlined />}
-                                    onClick={handleAddComment}
-                                    disabled={!comment.trim()}
-                                    style={{ backgroundColor: theme.primaryColor, borderColor: theme.primaryColor }}
-                                />
-                            </div>
-
-                            {/* Display comments */}
-                            {taskData.comments.length > 0 ? (
-                                <List
-                                    className="comment-list"
-                                    itemLayout="horizontal"
-                                    dataSource={taskData.comments}
-                                    renderItem={(item) => (
-                                        <Comment
-                                            author={<Text strong>{item.user.name}</Text>}
-                                            avatar={<Avatar src={item.user.avatar} />}
-                                            content={<p>{item.text}</p>}
-                                            datetime={
-                                                <Tooltip title={formatDate(item.timestamp)}>
-                                                    <span>{dayjs(item.timestamp).fromNow()}</span>
-                                                </Tooltip>
+                                                    {getStatusIcon(task.status)}
+                                                </Avatar>
+                                            }
+                                            title={
+                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                    <Text strong style={{ marginRight: '12px' }}>{task.title}</Text>
+                                                    <Tag color={getPriorityColor(task.priority)} style={{ borderRadius: '4px' }}>
+                                                        {task.priority}
+                                                    </Tag>
+                                                </div>
+                                            }
+                                            description={
+                                                <Paragraph ellipsis={{ rows: 1 }} style={{ marginBottom: 0 }}>
+                                                    {task.description}
+                                                </Paragraph>
                                             }
                                         />
-                                    )}
-                                />
-                            ) : (
-                                <Text type="secondary" style={{ textAlign: 'center', display: 'block', padding: '16px 0' }}>
-                                    ยังไม่มีความคิดเห็น
-                                </Text>
-                            )}
-                        </div>
-                    </TabPane>
-                </Tabs>
+                                        <Space size="large">
+                                            <div style={{ textAlign: 'center', minWidth: '90px' }}>
+                                                {task.assignee?.map(user => (
+                                                    <div key={user.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
+                                                        {user.profile ? <Avatar src={user.profile || undefined} size="small" style={{ marginRight: '8px' }} />
+                                                        :
+                                                            createAvatar(user.emp_name,user.emp_email)
+                                                        }
+                                                        <Text style={{ fontSize: '13px' }}>{user.emp_name}</Text>
+                                                    </div>
+                                                ))}
+                                            </div>
 
-                {/* Activity Timeline */}
-                <div style={{ marginTop: '32px' }}>
-                    <Divider orientation="center">ประวัติการดำเนินการ</Divider>
-                    <List
-                        itemLayout="horizontal"
-                        dataSource={taskData.activities}
-                        renderItem={(activity, index) => (
-                            <List.Item>
-                                <List.Item.Meta
-                                    avatar={
-                                        <Avatar style={{ backgroundColor: theme.primaryColor }}>
-                                            {activity.type === 'status_change' ? <SyncOutlined /> :
-                                                activity.type === 'extension_request' ? <CalendarOutlined /> :
-                                                    activity.type === 'approval' ? <CheckOutlined /> :
-                                                        activity.type === 'rejection' ? <CloseOutlined /> :
-                                                            <MessageOutlined />}
-                                        </Avatar>
-                                    }
-                                    title={
-                                        <span>
-                      <Text strong>{activity.user}</Text>
-                                            {activity.type === 'status_change' &&
-                                                ` เปลี่ยนสถานะจาก ${activity.from || 'เริ่มต้น'} เป็น ${activity.to}`}
-                                            {activity.type === 'extension_request' &&
-                                                ` ขอขยายเวลาถึง ${activity.requestedDate}`}
-                                            {activity.type === 'approval' &&
-                                                ` อนุมัติงาน`}
-                                            {activity.type === 'rejection' &&
-                                                ` ไม่อนุมัติงาน: ${activity.reason}`}
-                                            {activity.type === 'action_completed' &&
-                                                ` บันทึกผลการดำเนินงาน`}
-                    </span>
-                                    }
-                                    description={formatDate(activity.timestamp)}
-                                />
-                            </List.Item>
-                        )}
+
+                                            <div style={{ textAlign: 'right', minWidth: '120px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                    <CalendarOutlined style={{ marginRight: '8px', color: '#6b7280' }} />
+                                                    <Text style={{ fontSize: '13px' }}>
+                                                        {dayjs(task.due_date).format('D MMM YYYY')}
+                                                    </Text>
+                                                </div>
+                                                {calculateDaysRemaining(task.due_date).isOverdue && task.status !== 'Completed' ? (
+                                                    <Tag color="error" style={{
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        marginTop: '4px'
+                                                    }}>
+                                                        ล่าช้า {calculateDaysRemaining(task.due_date).days} วัน
+                                                    </Tag>
+                                                ) : (
+                                                    task.status !== 'Completed' && (
+                                                        <Text type="secondary" style={{
+                                                            fontSize: '12px',
+                                                            display: 'block',
+                                                            marginTop: '4px'
+                                                        }}>
+                                                            {calculateDaysRemaining(task.due_date).days} วันที่เหลือ
+                                                        </Text>
+                                                    )
+                                                )}
+                                            </div>
+                                        </Space>
+                                    </List.Item>
+                                )}
+                            />
+                        </Card>
+                    )
+                ) : (
+                    <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description={
+                            <div style={{ padding: '20px 0' }}>
+                                <Text style={{ fontSize: '16px' }}>ไม่พบงานที่ตรงกับเงื่อนไขการค้นหา</Text>
+                                <div style={{ marginTop: '12px' }}>
+                                    <Button type="primary" onClick={resetFilters}>ล้างตัวกรองทั้งหมด</Button>
+                                </div>
+                            </div>
+                        }
                     />
-                </div>
-            </Card>
-        </div>
+                )}
+
+                {/* Filter drawer */}
+                <Drawer
+                    title="ตัวกรอง"
+                    width={320}
+                    onClose={() => setShowFilterDrawer(false)}
+                    open={showFilterDrawer}
+                    extra={
+                        <Button type="link" onClick={resetFilters}>
+                            ล้างทั้งหมด
+                        </Button>
+                    }
+                    bodyStyle={{ paddingBottom: 80 }}
+                >
+                    <Space direction="vertical" style={{ width: '100%' }} size="large">
+                        <div>
+                            <Text strong style={{ display: 'block', marginBottom: '8px' }}>สถานะ</Text>
+                            <Checkbox.Group
+                                options={uniqueStatuses.map(status => ({
+                                    label: status,
+                                    value: status
+                                }))}
+                                value={filters.status}
+                                onChange={(values) => setFilters({...filters, status: values})}
+                                style={{ width: '100%' }}
+                            />
+                        </div>
+
+                        <div>
+                            <Text strong style={{ display: 'block', marginBottom: '8px' }}>ความสำคัญ</Text>
+                            <Checkbox.Group
+                                options={uniquePriorities.map(priority => ({
+                                    label: priority,
+                                    value: priority
+                                }))}
+                                value={filters.priority}
+                                onChange={(values) => setFilters({...filters, priority: values})}
+                                style={{ width: '100%' }}
+                            />
+                        </div>
+
+                        <div>
+                            <Text strong style={{ display: 'block', marginBottom: '8px' }}>หมวดหมู่</Text>
+                        </div>
+
+                        <div>
+                            <Text strong style={{ display: 'block', marginBottom: '8px' }}>ช่วงวันที่ครบกำหนด</Text>
+                            <RangePicker
+                                value={filters.dateRange}
+                                onChange={(dates:any) => setFilters({...filters, dateRange: dates})}
+                                style={{ width: '100%' }}
+                                format="DD/MM/YYYY"
+                            />
+                        </div>
+
+                        <div>
+                            <Text strong style={{ display: 'block', marginBottom: '8px' }}>ผู้รับผิดชอบ</Text>
+                            <Checkbox.Group
+                                options={uniqueAssignees.map(assignee => ({
+                                    label: assignee,
+                                    value: assignee
+                                }))}
+                                value={filters.assignee}
+                                onChange={(values) => setFilters({...filters, assignee: values})}
+                                style={{ width: '100%' }}
+                            />
+                        </div>
+
+                        <div>
+                            <Text strong style={{ display: 'block', marginBottom: '8px' }}>ผู้มอบหมาย</Text>
+                            <Checkbox.Group
+                                options={uniqueAssigners.map(assigner => ({
+                                    label: assigner,
+                                    value: assigner
+                                }))}
+                                value={filters.assigner}
+                                onChange={(values) => setFilters({...filters, assigner: values})}
+                                style={{ width: '100%' }}
+                            />
+                        </div>
+                    </Space>
+                </Drawer>
+            </div>
+        </ConfigProvider>
     );
 };
 
-export default TaskAction;
+
+export default TaskActionList;
